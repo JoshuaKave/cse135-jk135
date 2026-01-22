@@ -1,0 +1,445 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+*{
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0; /*might change later*/
+    overscroll-behavior: none;
+
+    --color-soil: #3d2817;
+    --color-bark: #5c4033;
+    --color-moss: #4a7c59;
+    --color-leaf: #6b9080;
+    --color-bamboo: #7d8f69;
+    --color-stone: #c9cba3;
+    --color-sand: #f4f1de;
+    --color-water: #a8dadc;
+    --color-sky: #e8f4f8;
+    --color-accent: #d4a574;
+
+    --font-heading: 'Crimson Pro', sans-serif;
+    --font-body: 'Inter', sans-serif;
+}
+
+body{
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    font-family: var(--font-body, sans-serif);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--color-soil, #3d2817);
+    background: linear-gradient(
+        color-mix(in srgb, var(--color-sky) 90%, var(--color-water) 10%),
+        color-mix(in srgb, var(--color-sand) 95%, var(--color-accent) 5%)
+    );
+    min-width: 100%;
+    min-height: 100vh;
+}
+
+header{
+    background-color: color-mix(in srgb, var(--color-bark) 95%, var(--color-soil) 5%);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    width: 100%;
+    nav {
+        padding: 1rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0 auto;
+        flex-wrap: wrap;
+
+        & a {
+            color: var(--color-sand, #f4f1de);
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            transition: all 350ms;
+            position: relative;
+            border-radius: 0.75rem;
+
+            &::before{
+                content:'';
+                position:absolute;
+                bottom:0;
+                left:50%;
+                width: 0;
+                height:2px;
+                background-color: color-mix(in srgb, var(--color-bamboo) 80%, var(--color-accent) 20%);
+                transform: translateX(-50%);
+                transition: width 350ms;
+            }
+
+            &:hover{
+                transform: translateY(-2px);
+                
+                &::before{
+                    width: 80%;
+                }
+            }
+
+            &:active{
+                transform:translateY(0);
+            }
+        }
+    }
+}
+
+main{
+    flex: 1;
+    padding: 0.1rem 1.5rem;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+
+    & p{
+        margin: 0 auto 1rem;
+        text-align: center;
+    }
+
+    hr {
+        border: none;
+        height: 2px;
+        background: linear-gradient(
+            to right,
+            transparent,
+            var(--color-moss, #4a7c59),
+            transparent
+        );
+        margin: 1.5rem 0;
+        animation: growLine 1s ease-out;
+    }
+}
+
+h1 {
+  font-family: var(--font-heading, 'Crimson Pro', serif);
+  font-weight: 700;
+  color: var(--color-soil, #3d2817);
+  margin-bottom: 1.5rem;
+  text-wrap: balance;
+  line-height: 1.2;
+}
+
+h2 {
+  font-family: var(--font-heading, 'Crimson Pro', serif);
+  font-weight: 600;
+  color: var(--color-bark, #5c4033);
+  margin-bottom: 1rem;
+  text-wrap: balance;
+}
+
+p {
+  margin-bottom: 1rem;
+  max-width: 70ch;
+  text-wrap: pretty;
+}
+
+.name {
+  color: var(--color-moss, #4a7c59);
+  font-weight: 700;
+  position: relative;
+  display: inline-block;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+#headshot{    
+    & img{
+        border-radius: 50%;
+        border: 4px solid var(--color-moss, #4a7c59);
+        object-fit: cover;
+        transition: transform var(--transition-slow, 600ms);
+        
+        &:hover {
+            transform: scale(1.05) rotate(2deg);
+        }
+    }
+
+}
+
+.logo-image {
+    display: block;
+    margin: 0 auto 1rem;
+    max-width: 100%;
+
+    img {
+        width: 100%;
+        max-width: 50%;
+        height: auto;
+        border-radius: 1rem;
+    }
+}
+
+button{
+    font-family: var(--font-body, sans-serif);
+    font-size: 1rem;
+    padding: 1rem 1.5rem;
+    margin: 0.5rem;
+    background-color: color-mix(in srgb, var(--color-moss) 85%, var(--color-leaf) 15%);
+    color: var(--color-sand, #f4f1de);
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 350ms;
+    position: relative;
+
+    &:hover{
+        background-color: color-mix(in srgb, var(--color-moss) 75%, var(--color-accent) 25%);
+        transform: translateY(-3px);
+    }
+
+    &:active {
+        transform: translateY(-1px);
+    }
+}
+
+footer{
+    background-color: var(--color-soil, #3d2817);
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--color-sand, #f4f1de);
+
+
+    & p{
+        margin: 0;
+    }
+
+    & a{
+        color: var(--color-sand, #f4f1de);
+        text-decoration: underline;
+        transition: color 200ms;
+
+        &:hover{
+            color: var(--color-moss, #4a7c59);
+        }
+    }
+}
+
+.grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2.5rem;
+    width: 100%;
+
+}
+
+.grid>article{
+    transition: all 350ms;
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    
+    &:hover{
+        border-color: var(--color-moss, #4a7c59);
+        transform: translateY(-5px);
+    }
+
+
+}
+
+article{
+    background: linear-gradient(
+        to bottom,
+        var(--color-sand, #f4f1de),
+        color-mix(in srgb, var(--color-stone) 30%, transparent)
+    );
+
+    border: 3px solid var(--color-bark, #5c4033);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 350ms;
+
+    & a{
+        text-decoration: none;
+        color: var(--color-moss, #4a7c59);
+        font-weight: 600;
+        transition: all 200ms;
+
+        &:hover{
+            color: var(--color-bamboo, #7d8f69);
+        }
+    }
+}
+
+form{
+  margin: 0 auto;
+}
+
+fieldset:has(legend){
+  border: 2px solid var(--color-moss, #4a7c59);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  background-color: color-mix(in srgb, white 50%, var(--color-sky) 10%);
+}
+
+fieldset legend{
+  font-family: var(--font-heading, 'Crimson Pro', serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  padding: 0 1rem;
+  color: var(--color-moss, #4a7c59);
+}
+
+form:has(label) label{
+  display: flex;
+  color: var(--color-soil, #3d2817);
+}
+
+form:has(input) input, form:has(textarea) textarea{
+  font-family: var(--font-body, sans-serif);
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid var(--color-stone, #c9cba3);
+  border-radius: 0.75rem;
+  transition: all 200ms;
+}
+
+form:has(input) input:focus, form:has(textarea) textarea:focus{
+  border-color: var(--color-moss, #4a7c59);
+  outline: none;
+}
+
+form:has(input) input:hover, form:has(textarea) textarea:hover{
+  border-color: var(--color-bamboo, #7d8f69);
+}
+
+project-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border: 3px solid var(--color-bark, #5c4033);
+  border-radius: 0.75rem;
+  padding: 2.5rem;
+  margin: 4rem auto;
+  max-width: 800px;
+  background: linear-gradient(
+    135deg,
+    var(--color-sand, #f4f1de) 0%,
+    color-mix(in srgb, var(--color-water) 15%, transparent) 100%
+  );
+  position: relative;
+  transition: all 350ms;
+
+  &:hover{
+    border-color: var(--color-moss, #4a7c59);
+  }
+
+  & h2 {
+    font-family: var(--font-heading, 'Crimson Pro', serif);
+    color: var(--color-moss, #4a7c59);
+    font-weight: 600;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--color-stone, #c9cba3);
+    text-wrap: balance;
+    margin: 0;
+  }
+  
+  & p {
+    color: var(--color-soil, #3d2817);
+    font-size: 1.05rem;
+    margin: 0;
+  }
+  
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+    
+    li {
+      padding: 1rem 1.5rem;
+      background-color: color-mix(in srgb, white 70%, var(--color-sand) 30%);
+      border-left: 4px solid var(--color-leaf, #6b9080);
+      border-radius: 0.5rem;
+      color: var(--color-soil, #3d2817);
+      transition: all 350ms;
+      font-size: 1rem;
+      position: relative;
+      overflow: hidden;
+      
+      &:hover {
+        background-color: color-mix(in srgb, white 95%, var(--color-moss) 5%);
+        transform: translateX(8px);
+        border-left-color: var(--color-moss, #4a7c59);
+      }
+    }
+  }
+}
+
+iframe{
+    border: 3px solid var(--color-bark, #5c4033);
+    border-radius: 1rem;
+    width: 100%;
+    height: 400px;
+}
+
+@media (max-width: 500px) {
+    header{
+        nav {
+            padding: 0.25rem;
+            gap: 0.075rem;
+            flex-wrap: wrap;
+
+            & a {
+                padding: 0.25rem 0.6rem;
+                font-size: 0.75rem;
+                border-radius: 0.5rem;
+            }
+        }
+    }
+}
+
+@media print {
+  header, footer, button {
+    display: none;
+  }
+  
+  body {
+    background: white;
+    color: black;
+  }
+  
+  article {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+@media (prefers-contrast: more) {
+  * {
+    --color-soil: #000000;
+    --color-sand: #ffffff;
+    font-weight: 700;
+  }
+  
+  button, article {
+    border-width: 3px;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes growLine {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
