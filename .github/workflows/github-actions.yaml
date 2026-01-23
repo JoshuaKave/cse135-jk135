@@ -1,18 +1,47 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+name: DEPLOY
+
+on:
+  push:
+    branches: [ "main" ]
+
 jobs:
-  Explore-GitHub-Actions:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v5
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.REMOTE_KEY }}
         run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.REMOTE_PORT }} -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy base.site
+        run: |
+          rsync -azv --delete \
+            --exclude-from="deploy/exclude.txt" \
+            -e "ssh -p ${{ secrets.REMOTE_PORT }}" \
+            base.site/ \
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/jk135.site/
+
+      - name: Deploy collector.site
+        run: |
+          rsync -azv --delete \
+            --exclude-from="deploy/exclude.txt" \
+            -e "ssh -p ${{ secrets.REMOTE_PORT }}" \
+            collector.site/ \
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/collector.jk135.site/
+
+      - name: Deploy reporting.site
+        run: |
+          rsync -azv --delete \
+            --exclude-from="deploy/exclude.txt" \
+            -e "ssh -p ${{ secrets.REMOTE_PORT }}" \
+            reporting.site/ \
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/reporting.jk135.site/
