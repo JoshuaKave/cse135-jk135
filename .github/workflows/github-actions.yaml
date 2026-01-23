@@ -27,7 +27,7 @@ jobs:
           rsync -azv --delete \
             --exclude-from="deploy/exclude.txt" \
             -e "ssh -p ${{ secrets.REMOTE_PORT }}" \
-            base.site/ \
+            jk135.site/ \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/jk135.site/
 
       - name: Deploy collector.site
@@ -35,7 +35,7 @@ jobs:
           rsync -azv --delete \
             --exclude-from="deploy/exclude.txt" \
             -e "ssh -p ${{ secrets.REMOTE_PORT }}" \
-            collector.site/ \
+            collector.jk135.site/ \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/collector.jk135.site/
 
       - name: Deploy reporting.site
@@ -43,5 +43,5 @@ jobs:
           rsync -azv --delete \
             --exclude-from="deploy/exclude.txt" \
             -e "ssh -p ${{ secrets.REMOTE_PORT }}" \
-            reporting.site/ \
+            reporting.jk135.site/ \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/reporting.jk135.site/
