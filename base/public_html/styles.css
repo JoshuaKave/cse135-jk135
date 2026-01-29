@@ -75,3 +75,59 @@ li a {
 li a:hover {
   background-color: #005599;
 }
+
+/* Dropdown menu styles */
+.dropdown {
+  cursor: pointer;
+}
+
+.dropdown summary {
+  list-style: none;
+  display: inline-block;
+}
+
+.dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.dropdown summary a {
+  display: inline-block;
+  padding: 8px 16px;
+  background-color: #003366;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.dropdown summary a:hover {
+  background-color: #005599;
+}
+
+.dropdown summary::after {
+  content: " ▼";
+  font-size: 0.7em;
+}
+
+.dropdown[open] summary::after {
+  content: " ▲";
+}
+
+.dropdown ul {
+  margin-top: 10px;
+  margin-left: 20px;
+}
+
+.dropdown ul li {
+  margin-bottom: 8px;
+}
+
+.dropdown ul li a {
+  background-color: #005599;
+  font-size: 0.9em;
+  padding: 6px 12px;
+}
+
+.dropdown ul li a:hover {
+  background-color: #0077cc;
+}
