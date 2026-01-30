@@ -110,18 +110,18 @@ section li {
   padding: 0.5rem 0;
 }
 
-details.dropdown summary {
+details summary {
   color: var(--ocean-blue);
   cursor: pointer;
   font-weight: 500;
   transition: color 0.2s ease;
 }
 
-details.dropdown summary:hover {
+details summary:hover {
   color: var(--coral);
 }
 
-details.dropdown ul {
+details ul {
   margin-top: 0.5rem;
   padding-left: 1.5rem;
   border-left: 2px solid var(--sea-foam);
