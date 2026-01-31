@@ -4,4 +4,5 @@ import os
 
 print("Content-Type: text/html\n\n")
 
-print(os.environ.get("REQUEST_METHOD"))
+for name, value in os.environ.items():
+    print(f"\"{name}\": \"{value}\"")
