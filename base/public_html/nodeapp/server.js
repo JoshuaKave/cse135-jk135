@@ -2,7 +2,7 @@ const express = require("express");
 // const cookieParser = require("cookie-parser");
 
 const helloRoutes = require("./routes/hello");
-const envRoutes = require("./routes/environment");
+const envRoutes = require("./routes/env");
 // const echoRoutes = require("./routes/echo");
 // const stateRoutes = require("./routes/state");
 

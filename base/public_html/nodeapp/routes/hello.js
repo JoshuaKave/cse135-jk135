@@ -20,7 +20,7 @@ router.get("/hello-html-nodejs", (req, res) => {
 </html>`);
 });
 
-router.get("/hello-json-node", (req, res) => {
+router.get("/hello-json-nodejs", (req, res) => {
   const c = common(req);
   res.json({
     message: `Hello from ${TEAM.join(", ")}!`,
