@@ -1,11 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta charset="UTF-8">
         <title>Echo Form</title>
-        <link rel="stylesheet" href="/styles.css">
+        <link rel="stylesheet" href="../styles.css">
     </head>
     <body>
-        <h1>Echo Form</h1>
+        <section>
+            <h1>Echo Form</h1>
+            <form>
+                <fieldset>
+                    <legend>
+                        Super Cool Echo Form
+                    </legend>
+                    <label for="language">Choose a language:</label>
+                    <select name="language" id="language" required>
+                        <option value="">--Please choose an option--</option>
+                        <option value="python">Python</option>
+                        <option value="nodejs">NodeJS</option>
+                        <option value="php">PHP</option>
+                        <option value="perl">Perl</option>
+                    </select>
+                    <label for="method">Choose a method:</label>
+                    <select name="method" id="method" required>
+                        <option value="">--Please choose an option--</option>
+                        <option value="get">GET</option>
+                        <option value="post">POST</option>
+                        <option value="put">PUT</option>
+                        <option value="delete">DELETE</option>
+                    </select>
+                    <label for="encoding">Choose an encoding:</label>
+                    <select name="encoding" id="encoding">
+                        <option value="">--Please choose an option--</option>
+                        <option value="x-www-form-urlencoded">x-www-form-urlencoded</option>
+                        <option value="application/json">application/json</option>
+                    </select>   
+                    <label for="name">Enter your name:</label>
+                    <input type="text" id="name" name="name">
+                    <label for="fun_fact">Enter a fun fact about yourself:</label>
+                    <textarea id="fun_fact" name="fun_fact"></textarea>
+                    <button type="submit">Submit</button>
+                </fieldset>
+            </form>
+    </section>
+    <script src="echo_form.js"></script>
     </body>
 </html>

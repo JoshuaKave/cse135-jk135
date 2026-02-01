@@ -155,3 +155,78 @@ details ul {
     margin-top: 0.5rem;
   }
 }
+
+form {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+fieldset {
+  border: 2px solid var(--sea-foam);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin: 0;
+  background-color: var(--white);
+}
+
+legend {
+  color: var(--deep-ocean);
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 0 0.5rem;
+}
+
+label {
+  display: block;
+  color: var(--deep-ocean);
+  font-weight: 500;
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+select,
+input[type="text"],
+textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--sea-foam);
+  border-radius: 0.25rem;
+  font-family: inherit;
+  font-size: 1rem;
+  background-color: var(--white);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+select:focus,
+input[type="text"]:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--ocean-blue);
+  box-shadow: 0 0 0 3px rgba(44, 95, 124, 0.1);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+button[type="submit"] {
+  margin-top: 1.5rem;
+  padding: 0.75rem 2rem;
+  background-color: var(--ocean-blue);
+  color: var(--white);
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+button[type="submit"]:hover {
+  background-color: var(--deep-ocean);
+}
+
+button[type="submit"]:active {
+  transform: translateY(1px);
+}
