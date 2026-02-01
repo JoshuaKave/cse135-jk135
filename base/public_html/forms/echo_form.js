@@ -19,7 +19,16 @@ function updateFields() {
     
     if (!method) {
         dynamicFields.innerHTML = '';
+        encodingSelect.disabled = false;
         return;
+    }
+    
+    // Disable encoding for GET and DELETE (they don't use request body)
+    if (method === 'get' || method === 'delete') {
+        encodingSelect.disabled = true;
+        encodingSelect.value = ''; // Reset selection
+    } else {
+        encodingSelect.disabled = false;
     }
     
     let fieldsHTML = '';

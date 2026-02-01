@@ -15,6 +15,9 @@ echo "<head>";
 echo "  <meta charset='UTF-8'>";
 echo "  <title>PHP Echo</title>";
 echo "  <link rel='stylesheet' href='../styles.css'>";
+echo "  <style>";
+echo "    pre { background-color: #f5f5f5; padding: 1rem; border-radius: 0.25rem; overflow-x: auto; }";
+echo "  </style>";
 echo "</head>";
 echo "<body>";
 echo "<section>";
@@ -41,22 +44,35 @@ if ($method === 'GET') {
     }
 } else {
     $data = [];
+    $isJson = false;
     
     if (strpos($contentType, 'application/json') !== false) {
         $json = file_get_contents('php://input');
         $data = json_decode($json, true) ?? [];
+        $isJson = true;
         echo "  <h2>JSON Body</h2>";
     } else {
-        $data = $_POST;
+        if ($method === 'POST') {
+            $data = $_POST;
+        } else {
+            $input = file_get_contents('php://input');
+            if (!empty($input)) {
+                parse_str($input, $data);
+            }
+        }
         echo "  <h2>Form Data</h2>";
     }
     
     if (!empty($data)) {
-        echo "  <ul>";
-        foreach ($data as $key => $value) {
-            echo "    <li><strong>" . htmlspecialchars($key) . ":</strong> " . htmlspecialchars($value) . "</li>";
+        if ($isJson) {
+            echo "  <pre>" . htmlspecialchars(json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) . "</pre>";
+        } else {
+            echo "  <ul>";
+            foreach ($data as $key => $value) {
+                echo "    <li><strong>" . htmlspecialchars($key) . ":</strong> " . htmlspecialchars($value) . "</li>";
+            }
+            echo "  </ul>";
         }
-        echo "  </ul>";
     } else {
         echo "  <p>No data received.</p>";
     }

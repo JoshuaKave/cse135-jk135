@@ -21,6 +21,9 @@ router.all('/echo-nodejs', (req, res) => {
     <meta charset="UTF-8">
     <title>NodeJS Echo</title>
     <link rel="stylesheet" href="../styles.css">
+    <style>
+        pre { background-color: #f5f5f5; padding: 1rem; border-radius: 0.25rem; overflow-x: auto; }
+    </style>
 </head>
 <body>
 <section>
@@ -49,19 +52,25 @@ router.all('/echo-nodejs', (req, res) => {
     } else {
         // Handle POST, PUT, DELETE
         const data = req.body;
+        const isJson = contentType.includes('application/json');
         
-        if (contentType.includes('application/json')) {
+        if (isJson) {
             html += '  <h2>JSON Body</h2>';
         } else {
             html += '  <h2>Form Data</h2>';
         }
         
         if (data && Object.keys(data).length > 0) {
-            html += '  <ul>';
-            for (const [key, value] of Object.entries(data)) {
-                html += `    <li><strong>${escapeHTML(key)}:</strong> ${escapeHTML(String(value))}</li>`;
+            if (isJson) {
+                const formattedJson = JSON.stringify(data, null, 2);
+                html += `  <pre>${escapeHTML(formattedJson)}</pre>`;
+            } else {
+                html += '  <ul>';
+                for (const [key, value] of Object.entries(data)) {
+                    html += `    <li><strong>${escapeHTML(key)}:</strong> ${escapeHTML(String(value))}</li>`;
+                }
+                html += '  </ul>';
             }
-            html += '  </ul>';
         } else {
             html += '  <p>No data received.</p>';
         }

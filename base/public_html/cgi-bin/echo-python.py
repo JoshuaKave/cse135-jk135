@@ -24,6 +24,9 @@ print("<head>")
 print('  <meta charset="UTF-8">')
 print("  <title>Python Echo</title>")
 print('  <link rel="stylesheet" href="../styles.css">')
+print("  <style>")
+print("    pre { background-color: #f5f5f5; padding: 1rem; border-radius: 0.25rem; overflow-x: auto; }")
+print("  </style>")
 print("</head>")
 print("<body>")
 print("<section>")
@@ -59,10 +62,8 @@ else:
             print("  <h2>JSON Body</h2>")
             try:
                 data = json.loads(body)
-                print("  <ul>")
-                for key, value in data.items():
-                    print(f"    <li><strong>{escape(key)}:</strong> {escape(str(value))}</li>")
-                print("  </ul>")
+                formatted_json = json.dumps(data, indent=2, ensure_ascii=False)
+                print(f"  <pre>{escape(formatted_json)}</pre>")
             except json.JSONDecodeError:
                 print("  <p>Invalid JSON received.</p>")
         else:
