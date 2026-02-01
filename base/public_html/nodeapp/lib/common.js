@@ -1,7 +1,10 @@
 const os = require("os");
 
 function nowIso() {
-  return new Date().toISOString();
+return new Date().toLocaleString("sv-SE", {
+    timeZone: "America/Los_Angeles"
+});
+
 }
 
 function common(req) {
