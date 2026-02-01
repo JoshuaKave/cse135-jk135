@@ -3,9 +3,10 @@ package main
 
 import (
 	"fmt"
-	"os"
 )
 
-func main(){
+func main() {
+	fmt.Println("Content-Type: text/plain")
+	fmt.Println()
 	fmt.Println("Hello, World!")
 }
