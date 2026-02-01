@@ -4,44 +4,340 @@
         <meta charset="UTF-8">
         <title>Echo Form</title>
         <link rel="stylesheet" href="../styles.css">
+        <style>
+            .js-form { display: block; }
+            .no-js-forms { display: none; }
+            
+            noscript + style + .js-form { display: none; }
+            
+            .method-group {
+                margin-bottom: 2rem;
+                padding: 1.5rem;
+                background-color: var(--white);
+                border: 1px solid var(--sea-foam);
+                border-radius: 0.5rem;
+            }
+            
+            .method-group h3 {
+                color: var(--ocean-blue);
+                margin-top: 0;
+                padding-bottom: 0.5rem;
+                border-bottom: 2px solid var(--sea-foam);
+            }
+            
+            .encoding-form {
+                margin: 1rem 0;
+                padding: 1rem;
+                background-color: var(--sand);
+                border-left: 4px solid var(--coral);
+                border-radius: 0.25rem;
+            }
+            
+            .encoding-form h4 {
+                color: var(--deep-ocean);
+                margin-top: 0;
+                font-size: 1rem;
+            }
+        </style>
     </head>
     <body>
+        <noscript>
+            <style>
+                .js-form { display: none !important; }
+                .no-js-forms { display: block !important; }
+            </style>
+        </noscript>
+        
         <section>
             <h1>Echo Form</h1>
-            <form>
-                <fieldset>
-                    <legend>
-                        Super Cool Echo Form
-                    </legend>
-                    <label for="language">Choose a language:</label>
-                    <select name="language" id="language" required>
-                        <option value="">--Please choose an option--</option>
-                        <option value="python">Python</option>
-                        <option value="nodejs">NodeJS</option>
-                        <option value="php">PHP</option>
-                        <option value="perl">Perl</option>
-                    </select>
-                    <label for="method">Choose a method:</label>
-                    <select name="method" id="method" required>
-                        <option value="">--Please choose an option--</option>
-                        <option value="get">GET</option>
-                        <option value="post">POST</option>
-                        <option value="put">PUT</option>
-                        <option value="delete">DELETE</option>
-                    </select>
-                    <label for="encoding">Choose an encoding:</label>
-                    <select name="encoding" id="encoding">
-                        <option value="">--Please choose an option--</option>
-                        <option value="x-www-form-urlencoded">x-www-form-urlencoded</option>
-                        <option value="application/json">application/json</option>
-                    </select>
-                    <div id="dynamic-fields">
-                    </div>             
-                    <button type="submit">Submit</button>
-                </fieldset>
-            </form>
+            
+            <!-- JavaScript-enabled form -->
+            <div class="js-form">
+                <form>
+                    <fieldset>
+                        <legend>Super Cool Echo Form</legend>
+                        
+                        <label for="language">Choose a language:</label>
+                        <select name="language" id="language" required>
+                            <option value="">--Please choose an option--</option>
+                            <option value="python">Python</option>
+                            <option value="nodejs">NodeJS</option>
+                            <option value="php">PHP</option>
+                            <option value="perl">Perl</option>
+                        </select>
+                        
+                        <label for="method">Choose a method:</label>
+                        <select name="method" id="method" required>
+                            <option value="">--Please choose an option--</option>
+                            <option value="get">GET</option>
+                            <option value="post">POST</option>
+                            <option value="put">PUT</option>
+                            <option value="delete">DELETE</option>
+                        </select>
+                        
+                        <label for="encoding">Choose an encoding:</label>
+                        <select name="encoding" id="encoding">
+                            <option value="">--Please choose an option--</option>
+                            <option value="x-www-form-urlencoded">x-www-form-urlencoded</option>
+                            <option value="application/json">application/json</option>
+                        </select>
+                        
+                        <div id="dynamic-fields"></div>             
+                        <button type="submit">Submit</button>
+                    </fieldset>
+                </form>
+            </div>
+            
+            <!-- No-JavaScript fallback forms -->
+            <div class="no-js-forms">
+                <p><strong>Note:</strong> JavaScript is disabled. Please select your desired language, method, and encoding below.</p>
+                
+                <!-- Python Forms -->
+                <details open>
+                    <summary><h2>Python</h2></summary>
+                    
+                    <div class="method-group">
+                        <h3>GET Requests</h3>
+                        <div class="encoding-form">
+                            <h4>URL Encoded (default for GET)</h4>
+                            <form action="/cgi-bin/echo-python.py" method="GET">
+                                <label for="py-get-search">Search term:</label>
+                                <input type="text" id="py-get-search" name="search" placeholder="e.g., javascript">
+                                
+                                <label for="py-get-category">Category:</label>
+                                <input type="text" id="py-get-category" name="category" placeholder="e.g., programming">
+                                
+                                <label for="py-get-limit">Limit:</label>
+                                <input type="text" id="py-get-limit" name="limit" placeholder="e.g., 10">
+                                
+                                <button type="submit">Submit GET</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="method-group">
+                        <h3>POST Requests</h3>
+                        <div class="encoding-form">
+                            <h4>URL Encoded</h4>
+                            <form action="/cgi-bin/echo-python.py" method="POST" enctype="application/x-www-form-urlencoded">
+                                <label for="py-post-url-name">Name:</label>
+                                <input type="text" id="py-post-url-name" name="name" placeholder="Enter name" required>
+                                
+                                <label for="py-post-url-email">Email:</label>
+                                <input type="text" id="py-post-url-email" name="email" placeholder="Enter email">
+                                
+                                <label for="py-post-url-message">Message:</label>
+                                <textarea id="py-post-url-message" name="message" placeholder="Enter your message"></textarea>
+                                
+                                <button type="submit">Submit POST (URL Encoded)</button>
+                            </form>
+                        </div>
+                        
+                        <div class="encoding-form">
+                            <h4>JSON (Limited - requires JavaScript for full support)</h4>
+                            <p><em>Note: True JSON submission requires JavaScript. This will send as URL-encoded.</em></p>
+                            <form action="/cgi-bin/echo-python.py" method="POST">
+                                <label for="py-post-json-name">Name:</label>
+                                <input type="text" id="py-post-json-name" name="name" placeholder="Enter name" required>
+                                
+                                <label for="py-post-json-email">Email:</label>
+                                <input type="text" id="py-post-json-email" name="email" placeholder="Enter email">
+                                
+                                <label for="py-post-json-message">Message:</label>
+                                <textarea id="py-post-json-message" name="message" placeholder="Enter your message"></textarea>
+                                
+                                <button type="submit">Submit POST (Fallback)</button>
+                            </form>
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- PHP Forms -->
+                <details>
+                    <summary><h2>PHP</h2></summary>
+                    
+                    <div class="method-group">
+                        <h3>GET Requests</h3>
+                        <div class="encoding-form">
+                            <h4>URL Encoded (default for GET)</h4>
+                            <form action="/cgi-bin/echo-php.php" method="GET">
+                                <label for="php-get-search">Search term:</label>
+                                <input type="text" id="php-get-search" name="search" placeholder="e.g., javascript">
+                                
+                                <label for="php-get-category">Category:</label>
+                                <input type="text" id="php-get-category" name="category" placeholder="e.g., programming">
+                                
+                                <label for="php-get-limit">Limit:</label>
+                                <input type="text" id="php-get-limit" name="limit" placeholder="e.g., 10">
+                                
+                                <button type="submit">Submit GET</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="method-group">
+                        <h3>POST Requests</h3>
+                        <div class="encoding-form">
+                            <h4>URL Encoded</h4>
+                            <form action="/cgi-bin/echo-php.php" method="POST" enctype="application/x-www-form-urlencoded">
+                                <label for="php-post-url-name">Name:</label>
+                                <input type="text" id="php-post-url-name" name="name" placeholder="Enter name" required>
+                                
+                                <label for="php-post-url-email">Email:</label>
+                                <input type="text" id="php-post-url-email" name="email" placeholder="Enter email">
+                                
+                                <label for="php-post-url-message">Message:</label>
+                                <textarea id="php-post-url-message" name="message" placeholder="Enter your message"></textarea>
+                                
+                                <button type="submit">Submit POST (URL Encoded)</button>
+                            </form>
+                        </div>
+                        
+                        <div class="encoding-form">
+                            <h4>JSON (Limited - requires JavaScript for full support)</h4>
+                            <p><em>Note: True JSON submission requires JavaScript. This will send as URL-encoded.</em></p>
+                            <form action="/cgi-bin/echo-php.php" method="POST">
+                                <label for="php-post-json-name">Name:</label>
+                                <input type="text" id="php-post-json-name" name="name" placeholder="Enter name" required>
+                                
+                                <label for="php-post-json-email">Email:</label>
+                                <input type="text" id="php-post-json-email" name="email" placeholder="Enter email">
+                                
+                                <label for="php-post-json-message">Message:</label>
+                                <textarea id="php-post-json-message" name="message" placeholder="Enter your message"></textarea>
+                                
+                                <button type="submit">Submit POST (Fallback)</button>
+                            </form>
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- NodeJS Forms -->
+                <details>
+                    <summary><h2>NodeJS</h2></summary>
+                    
+                    <div class="method-group">
+                        <h3>GET Requests</h3>
+                        <div class="encoding-form">
+                            <h4>URL Encoded (default for GET)</h4>
+                            <form action="/node/echo-nodejs" method="GET">
+                                <label for="node-get-search">Search term:</label>
+                                <input type="text" id="node-get-search" name="search" placeholder="e.g., javascript">
+                                
+                                <label for="node-get-category">Category:</label>
+                                <input type="text" id="node-get-category" name="category" placeholder="e.g., programming">
+                                
+                                <label for="node-get-limit">Limit:</label>
+                                <input type="text" id="node-get-limit" name="limit" placeholder="e.g., 10">
+                                
+                                <button type="submit">Submit GET</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="method-group">
+                        <h3>POST Requests</h3>
+                        <div class="encoding-form">
+                            <h4>URL Encoded</h4>
+                            <form action="/node/echo-nodejs" method="POST" enctype="application/x-www-form-urlencoded">
+                                <label for="node-post-url-name">Name:</label>
+                                <input type="text" id="node-post-url-name" name="name" placeholder="Enter name" required>
+                                
+                                <label for="node-post-url-email">Email:</label>
+                                <input type="text" id="node-post-url-email" name="email" placeholder="Enter email">
+                                
+                                <label for="node-post-url-message">Message:</label>
+                                <textarea id="node-post-url-message" name="message" placeholder="Enter your message"></textarea>
+                                
+                                <button type="submit">Submit POST (URL Encoded)</button>
+                            </form>
+                        </div>
+                        
+                        <div class="encoding-form">
+                            <h4>JSON (Limited - requires JavaScript for full support)</h4>
+                            <p><em>Note: True JSON submission requires JavaScript. This will send as URL-encoded.</em></p>
+                            <form action="/node/echo-nodejs" method="POST">
+                                <label for="node-post-json-name">Name:</label>
+                                <input type="text" id="node-post-json-name" name="name" placeholder="Enter name" required>
+                                
+                                <label for="node-post-json-email">Email:</label>
+                                <input type="text" id="node-post-json-email" name="email" placeholder="Enter email">
+                                
+                                <label for="node-post-json-message">Message:</label>
+                                <textarea id="node-post-json-message" name="message" placeholder="Enter your message"></textarea>
+                                
+                                <button type="submit">Submit POST (Fallback)</button>
+                            </form>
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Perl Forms -->
+                <details>
+                    <summary><h2>Perl</h2></summary>
+                    
+                    <div class="method-group">
+                        <h3>GET Requests</h3>
+                        <div class="encoding-form">
+                            <h4>URL Encoded (default for GET)</h4>
+                            <form action="/cgi-bin/perl-general-echo.pl" method="GET">
+                                <label for="perl-get-search">Search term:</label>
+                                <input type="text" id="perl-get-search" name="search" placeholder="e.g., javascript">
+                                
+                                <label for="perl-get-category">Category:</label>
+                                <input type="text" id="perl-get-category" name="category" placeholder="e.g., programming">
+                                
+                                <label for="perl-get-limit">Limit:</label>
+                                <input type="text" id="perl-get-limit" name="limit" placeholder="e.g., 10">
+                                
+                                <button type="submit">Submit GET</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="method-group">
+                        <h3>POST Requests</h3>
+                        <div class="encoding-form">
+                            <h4>URL Encoded</h4>
+                            <form action="/cgi-bin/perl-general-echo.pl" method="POST" enctype="application/x-www-form-urlencoded">
+                                <label for="perl-post-url-name">Name:</label>
+                                <input type="text" id="perl-post-url-name" name="name" placeholder="Enter name" required>
+                                
+                                <label for="perl-post-url-email">Email:</label>
+                                <input type="text" id="perl-post-url-email" name="email" placeholder="Enter email">
+                                
+                                <label for="perl-post-url-message">Message:</label>
+                                <textarea id="perl-post-url-message" name="message" placeholder="Enter your message"></textarea>
+                                
+                                <button type="submit">Submit POST (URL Encoded)</button>
+                            </form>
+                        </div>
+                        
+                        <div class="encoding-form">
+                            <h4>JSON (Limited - requires JavaScript for full support)</h4>
+                            <p><em>Note: True JSON submission requires JavaScript. This will send as URL-encoded.</em></p>
+                            <form action="/cgi-bin/perl-general-echo.pl" method="POST">
+                                <label for="perl-post-json-name">Name:</label>
+                                <input type="text" id="perl-post-json-name" name="name" placeholder="Enter name" required>
+                                
+                                <label for="perl-post-json-email">Email:</label>
+                                <input type="text" id="perl-post-json-email" name="email" placeholder="Enter email">
+                                
+                                <label for="perl-post-json-message">Message:</label>
+                                <textarea id="perl-post-json-message" name="message" placeholder="Enter your message"></textarea>
+                                
+                                <button type="submit">Submit POST (Fallback)</button>
+                            </form>
+                        </div>
+                    </div>
+                </details>
+                
+                <p><em>Note: PUT and DELETE methods are not supported without JavaScript as HTML forms only support GET and POST natively.</em></p>
+            </div>
+            
             <a href="../index.html">Back to Home</a>
-    </section>
-    <script src="echo_form.js"></script>
+        </section>
+        
+        <script src="echo_form.js"></script>
     </body>
 </html>
