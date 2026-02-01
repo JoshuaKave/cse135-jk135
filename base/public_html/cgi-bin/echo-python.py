@@ -4,11 +4,16 @@ import sys
 import json
 from urllib.parse import parse_qs
 from html import escape
+from datetime import datetime
 
 method = os.environ.get('REQUEST_METHOD', 'GET')
 protocol = os.environ.get('SERVER_PROTOCOL', 'HTTP/1.1')
 content_type = os.environ.get('CONTENT_TYPE', 'Not needed')
 query_string = os.environ.get('QUERY_STRING', '')
+hostname = os.environ.get('SERVER_NAME', 'Unknown')
+user_agent = os.environ.get('HTTP_USER_AGENT', 'Unknown')
+remote_addr = os.environ.get('REMOTE_ADDR', 'Unknown')
+timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 print("Content-Type: text/html; charset=UTF-8")
 print()
@@ -27,6 +32,10 @@ print("  <h2>Request Information</h2>")
 print(f"  <p><strong>HTTP Protocol:</strong> {escape(protocol)}</p>")
 print(f"  <p><strong>HTTP Method:</strong> {escape(method)}</p>")
 print(f"  <p><strong>Content-Type:</strong> {escape(content_type)}</p>")
+print(f"  <p><strong>Hostname:</strong> {escape(hostname)}</p>")
+print(f"  <p><strong>Date/Time:</strong> {escape(timestamp)}</p>")
+print(f"  <p><strong>User-Agent:</strong> {escape(user_agent)}</p>")
+print(f"  <p><strong>Client IP:</strong> {escape(remote_addr)}</p>")
 
 if method == 'GET':
     print("  <h2>Query Parameters</h2>")

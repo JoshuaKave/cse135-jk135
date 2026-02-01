@@ -4,6 +4,10 @@ header('Content-Type: text/html; charset=UTF-8');
 $method = $_SERVER['REQUEST_METHOD'];
 $protocol = $_SERVER['SERVER_PROTOCOL'];
 $contentType = $_SERVER['CONTENT_TYPE'] ?? 'Not needed';
+$hostname = $_SERVER['SERVER_NAME'] ?? 'Unknown';
+$dateTime = date('c');
+$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+$ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
 
 echo "<!DOCTYPE html>";
 echo "<html lang='en'>";
@@ -19,6 +23,10 @@ echo "  <h2>Request Information</h2>";
 echo "  <p><strong>HTTP Protocol:</strong> " . htmlspecialchars($protocol) . "</p>";
 echo "  <p><strong>HTTP Method:</strong> " . htmlspecialchars($method) . "</p>";
 echo "  <p><strong>Content-Type:</strong> " . htmlspecialchars($contentType) . "</p>";
+echo "  <p><strong>Hostname:</strong> " . htmlspecialchars($hostname) . "</p>";
+echo "  <p><strong>Date/Time:</strong> " . htmlspecialchars($dateTime) . "</p>";
+echo "  <p><strong>User-Agent:</strong> " . htmlspecialchars($userAgent) . "</p>";
+echo "  <p><strong>IP Address:</strong> " . htmlspecialchars($ipAddress) . "</p>";
 
 if ($method === 'GET') {
     echo "  <h2>Query Parameters</h2>";
@@ -32,7 +40,6 @@ if ($method === 'GET') {
         echo "  <p>No query parameters received.</p>";
     }
 } else {
-    // Handle POST, PUT, DELETE
     $data = [];
     
     if (strpos($contentType, 'application/json') !== false) {
@@ -40,7 +47,6 @@ if ($method === 'GET') {
         $data = json_decode($json, true) ?? [];
         echo "  <h2>JSON Body</h2>";
     } else {
-        // application/x-www-form-urlencoded
         $data = $_POST;
         echo "  <h2>Form Data</h2>";
     }
