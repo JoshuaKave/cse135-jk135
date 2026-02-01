@@ -2,5 +2,4 @@
 .github/
 .env
 **/.env
-public_html/nodeapp/node_modules/
-**/node_modules/
+**/public_html/nodeapp/node_modules/
