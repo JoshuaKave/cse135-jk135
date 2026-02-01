@@ -23,7 +23,7 @@ router.get("/hello-html-nodejs", (req, res) => {
 router.get("/hello-json-nodejs", (req, res) => {
   const c = common(req);
   res.json({
-    message: `Hello from ${TEAM.join(", ")}!`,
+    message: `Hello from Josh!`,
     language: "NodeJS (Express)",
     generated_at: c.time,
     your_ip: c.ip

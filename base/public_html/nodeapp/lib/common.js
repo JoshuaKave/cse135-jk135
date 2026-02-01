@@ -13,7 +13,7 @@ function common(req) {
   };
 }
 
-function escapeHtml(s) {
+function escapeHTML(s) {
   return String(s)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -22,4 +22,4 @@ function escapeHtml(s) {
     .replaceAll("'", "&#39;");
 }
 
-module.exports = { common, nowIso, escapeHtml };
+module.exports = { common, nowIso, escapeHTML };
