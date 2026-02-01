@@ -85,12 +85,12 @@ function updateFields() {
     dynamicFields.innerHTML = fieldsHTML;
 }
 
-form.addEventListener('submit', (event) => {
+form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const selectedLanguage = languageSelect.value;
-    const selectedMethod = methodSelect.value;
-    const selectedEncoding = encodingSelect.value;
+    const selectedMethod = methodSelect.value.toUpperCase();
+    const selectedEncoding = encodingSelect.value || 'application/x-www-form-urlencoded';
 
     if (!selectedLanguage || !selectedMethod) {
         alert('Please select both a language and a method');
@@ -98,21 +98,43 @@ form.addEventListener('submit', (event) => {
     }
 
     const url = routes[selectedLanguage];
-    
-    if (!url) {
-        alert('Invalid language selection');
-        return;
+
+    // Collect form data
+    const formData = new FormData(form);
+    const data = {};
+    for (let [key, value] of formData.entries()) {
+        if (key !== 'language' && key !== 'method' && key !== 'encoding') {
+            data[key] = value;
+        }
     }
 
-    // Set the form action and method dynamically
-    form.action = url;
-    form.method = selectedMethod;
+    // Build request
+    let fetchUrl = url;
+    let fetchOptions = { method: selectedMethod };
 
-    // Set encoding if specified
-    if (selectedEncoding) {
-        form.enctype = selectedEncoding;
+    if (selectedMethod === 'GET') {
+        const params = new URLSearchParams(data);
+        fetchUrl = `${url}?${params.toString()}`;
+    } else {
+        if (selectedEncoding === 'application/json') {
+            fetchOptions.headers = { 'Content-Type': 'application/json' };
+            fetchOptions.body = JSON.stringify(data);
+        } else {
+            fetchOptions.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+            fetchOptions.body = new URLSearchParams(data).toString();
+        }
     }
 
-    // Submit the form (will navigate to the echo page)
-    form.submit();
+    // Send request and open response in new window
+    try {
+        const response = await fetch(fetchUrl, fetchOptions);
+        const html = await response.text();
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+            newWindow.document.write(html);
+            newWindow.document.close();
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
 });
