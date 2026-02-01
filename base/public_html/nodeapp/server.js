@@ -12,7 +12,7 @@ app.set("trust proxy", true);
 // body parsing
 app.use(express.json({ type: ["application/json", "application/*+json"] }));
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
+// app.use(cookieParser());
 
 // optional ping for testing
 app.get("/ping", (req, res) => res.json({ ok: true }));
