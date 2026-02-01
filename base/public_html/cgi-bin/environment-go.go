@@ -1,3 +1,4 @@
+#!/usr/bin/go
 package main
 
 import (
