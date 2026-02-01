@@ -30,6 +30,11 @@ jobs:
             base/ \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/jk135.site/
 
+      - name: Restart node service (base.site)
+        run: |
+          ssh -p ${{secrets.REMOTE_PORT }} ${{secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} \
+          "sudo systemctl restart jk135-nodeapp"
+
       - name: Deploy collector.site
         run: |
           rsync -azv --delete \
