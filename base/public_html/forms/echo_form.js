@@ -24,7 +24,7 @@ function updateFields() {
     }
     
     // Disable encoding for GET and DELETE (they don't use request body)
-    if (method === 'get' || method === 'delete') {
+    if (method === 'get') {
         encodingSelect.disabled = true;
         encodingSelect.value = ''; // Reset selection
     } else {
