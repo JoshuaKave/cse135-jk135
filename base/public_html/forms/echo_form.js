@@ -99,7 +99,7 @@ form.addEventListener('submit', async (event) => {
 
     const selectedLanguage = languageSelect.value;
     const selectedMethod = methodSelect.value.toUpperCase();
-    const selectedEncoding = encodingSelect.value || 'application/x-www-form-urlencoded';
+    const selectedEncoding = encodingSelect.value || 'Not applicable';
 
     if (!selectedLanguage || !selectedMethod) {
         alert('Please select both a language and a method');
