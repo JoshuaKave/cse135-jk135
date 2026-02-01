@@ -7,7 +7,7 @@ from html import escape
 
 method = os.environ.get('REQUEST_METHOD', 'GET')
 protocol = os.environ.get('SERVER_PROTOCOL', 'HTTP/1.1')
-content_type = os.environ.get('CONTENT_TYPE', '')
+content_type = os.environ.get('CONTENT_TYPE', 'Not specified')
 query_string = os.environ.get('QUERY_STRING', '')
 
 print("Content-Type: text/html; charset=UTF-8")

@@ -1,10 +1,9 @@
 <?php
-<?php
 header('Content-Type: text/html; charset=UTF-8');
 
 $method = $_SERVER['REQUEST_METHOD'];
 $protocol = $_SERVER['SERVER_PROTOCOL'];
-$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+$contentType = $_SERVER['CONTENT_TYPE'] ?? 'Not specified';
 
 echo "<!DOCTYPE html>";
 echo "<html lang='en'>";

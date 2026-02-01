@@ -6,7 +6,7 @@ const router = express.Router();
 router.all('/echo-nodejs', (req, res) => {
   const method = req.method;
   const protocol = req.protocol.toUpperCase() + '/' + req.httpVersion;
-  const contentType = req.get('content-type') || '';
+  const contentType = req.get('content-type') || 'Not specified';
   
   let html = `<!DOCTYPE html>
 <html lang="en">
