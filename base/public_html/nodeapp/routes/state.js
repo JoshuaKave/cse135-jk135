@@ -19,13 +19,13 @@ router.get("/state-nodejs-set", (req, res) => {
 <body>
   <h1>State Demo (Node/Express) - Set</h1>
 
-  <form method="post" action="/node/state-node-save">
+  <form method="post" action="/node/state-nodejs-save">
     <label>Favorite color: <input name="favorite_color" required></label><br><br>
     <label>Favorite food: <input name="favorite_food" required></label><br><br>
     <button type="submit">Save</button>
   </form>
 
-  <p><a href="/node/state-node-view">View saved state</a></p>
+  <p><a href="/node/state-nodejs-view">View saved state</a></p>
 </body>
 </html>`);
 });
