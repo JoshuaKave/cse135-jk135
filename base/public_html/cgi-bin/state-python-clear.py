@@ -14,7 +14,7 @@ cookie["favorite_food"]["max-age"] = 0
 print("Status: 302 Found")
 print("Location: /cgi-bin/state-python-view.py")
 
-for morsel in cookie.values():
-    print(morsel.OutputString())
+for line in cookie.output().splitlines():
+    print(line)
 
 print()

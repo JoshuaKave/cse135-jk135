@@ -23,8 +23,7 @@ cookie["favorite_food"]["path"] = "/"
 print("Status: 302 Found")
 print("Location: /cgi-bin/state-python-view.py")
 
-# ✅ Correct: prints "Set-Cookie: ..." lines
 for line in cookie.output().splitlines():
     print(line)
 
-print()  # end headers
+print()
