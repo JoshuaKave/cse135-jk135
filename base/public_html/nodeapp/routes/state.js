@@ -31,18 +31,18 @@ router.get("/state-nodejs-set", (req, res) => {
 });
 
 // Save handler (sets cookies, then redirect)
-router.post("/state-node-save", (req, res) => {
+router.post("/state-nodejs-save", (req, res) => {
   const color = String(req.body.favorite_color || "").trim().slice(0, 100);
   const food  = String(req.body.favorite_food || "").trim().slice(0, 100);
 
   res.cookie("favorite_color", color, { path: "/", sameSite: "Lax" });
   res.cookie("favorite_food", food, { path: "/", sameSite: "Lax" });
 
-  res.redirect("/state-node-view");
+  res.redirect("/state-nodejs-view");
 });
 
 // 3) View page
-router.get("/state-node-view", (req, res) => {
+router.get("/state-nodejs-view", (req, res) => {
   const color = req.cookies.favorite_color || "";
   const food  = req.cookies.favorite_food || "";
 
@@ -59,20 +59,20 @@ router.get("/state-node-view", (req, res) => {
          <p><strong>Favorite food:</strong> ${escapeHtml(food)}</p>`
   }
 
-  <form method="post" action="/node/state-node-clear">
+  <form method="post" action="/node/state-nodejs-clear">
     <button type="submit">Clear saved state</button>
   </form>
 
-  <p><a href="/node/state-node-set">Back to set page</a></p>
+  <p><a href="/node/state-nodejs-set">Back to set page</a></p>
 </body>
 </html>`);
 });
 
 // 4) Clear handler
-router.post("/state-node-clear", (req, res) => {
+router.post("/state-nodejs-clear", (req, res) => {
   res.clearCookie("favorite_color", { path: "/" });
   res.clearCookie("favorite_food", { path: "/" });
-  res.redirect("/state-node-view");
+  res.redirect("/state-nodejs-view");
 });
 
 module.exports = router;
