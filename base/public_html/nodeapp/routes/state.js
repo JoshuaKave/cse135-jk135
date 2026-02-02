@@ -38,7 +38,7 @@ router.post("/state-nodejs-save", (req, res) => {
   res.cookie("favorite_color", color, { path: "/", sameSite: "Lax" });
   res.cookie("favorite_food", food, { path: "/", sameSite: "Lax" });
 
-  res.redirect("/state-nodejs-view");
+  res.redirect("/node/state-nodejs-view");
 });
 
 // 3) View page
@@ -72,7 +72,7 @@ router.get("/state-nodejs-view", (req, res) => {
 router.post("/state-nodejs-clear", (req, res) => {
   res.clearCookie("favorite_color", { path: "/" });
   res.clearCookie("favorite_food", { path: "/" });
-  res.redirect("/state-nodejs-view");
+  res.redirect("/node/state-nodejs-view");
 });
 
 module.exports = router;
