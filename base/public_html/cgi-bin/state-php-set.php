@@ -24,5 +24,6 @@ header("Content-Type: text/html; charset=UTF-8");
         </form>
 
         <p><a href="/cgi-bin/state-php-view.php">View saved state</a></p>
+        <a href="/index.html">Home</a>
     </body>
  </html>

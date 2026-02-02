@@ -12,6 +12,7 @@
 
   --default-margin: 0.5rem;
   --default-padding: 1rem;
+  margin: var(--default-margin, 0.5rem);
 }
 
 body {
