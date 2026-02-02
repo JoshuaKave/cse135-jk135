@@ -12,20 +12,20 @@ function escapeHtml(s) {
 }
 
 // 1) Set page
-router.get("/state-node-set", (req, res) => {
+router.get("/state-nodejs-set", (req, res) => {
   res.type("html").send(`<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>State Demo (Node) - Set</title></head>
 <body>
   <h1>State Demo (Node/Express) - Set</h1>
 
-  <form method="post" action="/state-node-save">
+  <form method="post" action="/node/state-node-save">
     <label>Favorite color: <input name="favorite_color" required></label><br><br>
     <label>Favorite food: <input name="favorite_food" required></label><br><br>
     <button type="submit">Save</button>
   </form>
 
-  <p><a href="/state-node-view">View saved state</a></p>
+  <p><a href="/node/state-node-view">View saved state</a></p>
 </body>
 </html>`);
 });
@@ -59,11 +59,11 @@ router.get("/state-node-view", (req, res) => {
          <p><strong>Favorite food:</strong> ${escapeHtml(food)}</p>`
   }
 
-  <form method="post" action="/state-node-clear">
+  <form method="post" action="/node/state-node-clear">
     <button type="submit">Clear saved state</button>
   </form>
 
-  <p><a href="/state-node-set">Back to set page</a></p>
+  <p><a href="/node/state-node-set">Back to set page</a></p>
 </body>
 </html>`);
 });
