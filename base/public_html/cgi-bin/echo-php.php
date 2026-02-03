@@ -78,7 +78,7 @@ if ($method === 'GET') {
     }
 }
 
-echo "  <p><a href='../forms/echo_form.html'>Back to Form</a></p>";
+echo "  <p><a href='/forms/echo_form.html'>Back to Form</a></p>";
 echo "</section>";
 echo "</body>";
 echo "</html>";

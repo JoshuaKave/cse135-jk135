@@ -76,7 +76,7 @@ router.all('/echo-nodejs', (req, res) => {
         }
     }
 
-    html += `  <p><a href="../forms/echo_form.html">Back to Form</a></p>
+    html += `  <p><a href="/forms/echo_form.html">Back to Form</a></p>
 </section>
 </body>
 </html>`;

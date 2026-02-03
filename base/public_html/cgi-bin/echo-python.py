@@ -80,7 +80,7 @@ else:
     else:
         print("  <p>No data received.</p>")
 
-print('  <p><a href="../forms/echo_form.html">Back to Form</a></p>')
+print('  <p><a href="/forms/echo_form.html">Back to Form</a></p>')
 print("</section>")
 print("</body>")
 print("</html>")
