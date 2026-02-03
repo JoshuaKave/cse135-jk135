@@ -10,8 +10,6 @@ const languageSelect = document.getElementById('language');
 const methodSelect = document.getElementById('method');
 const encodingSelect = document.getElementById('encoding');
 const dynamicFields = document.getElementById('dynamic-fields');
-
-// Update fields when method changes
 methodSelect.addEventListener('change', updateFields);
 
 function updateFields() {
@@ -26,7 +24,7 @@ function updateFields() {
     // Disable encoding for GET and DELETE (they don't use request body)
     if (method === 'get') {
         encodingSelect.disabled = true;
-        encodingSelect.value = ''; // Reset selection
+        encodingSelect.value = ''; 
     } else {
         encodingSelect.disabled = false;
     }
@@ -35,7 +33,6 @@ function updateFields() {
     
     switch(method) {
         case 'get':
-            // GET: Search/filter parameters
             fieldsHTML = `
                 <label for="search">Search term:</label>
                 <input type="text" id="search" name="search" placeholder="e.g., javascript">
@@ -107,8 +104,6 @@ form.addEventListener('submit', async (event) => {
     }
 
     const url = routes[selectedLanguage];
-
-    // Collect form data
     const formData = new FormData(form);
     const data = {};
     for (let [key, value] of formData.entries()) {
@@ -117,52 +112,34 @@ form.addEventListener('submit', async (event) => {
         }
     }
 
-    // Build request
     let fetchUrl = url;
-    let fetchOptions = { method: selectedMethod };
+    let fetchOptions = { 
+        method: selectedMethod,
+        headers: {}
+    };
 
     if (selectedMethod === 'GET') {
         const params = new URLSearchParams(data);
-        fetchUrl = `${url}?${params.toString()}`;
+        if (params.toString()) {
+            fetchUrl = `${url}?${params.toString()}`;
+        }
     } else {
         if (selectedEncoding === 'application/json') {
-            fetchOptions.headers = { 'Content-Type': 'application/json' };
+            fetchOptions.headers['Content-Type'] = 'application/json';
             fetchOptions.body = JSON.stringify(data);
         } else {
-            fetchOptions.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+            fetchOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded';
             fetchOptions.body = new URLSearchParams(data).toString();
         }
     }
-
-    // Redirect to the response page
     try {
-        if (selectedMethod === 'GET') {
-            window.location.href = fetchUrl;
-        } 
-        else {
-            const tempForm = document.createElement('form');
-            tempForm.method = selectedMethod;
-            tempForm.action = url;
-            
-            if (selectedEncoding === 'application/json') {
-                const jsonInput = document.createElement('input');
-                jsonInput.type = 'hidden';
-                jsonInput.name = 'json_data';
-                jsonInput.value = JSON.stringify(data);
-                tempForm.appendChild(jsonInput);
-            } else {
-                for (const [key, value] of Object.entries(data)) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = key;
-                    input.value = value;
-                    tempForm.appendChild(input);
-                }
-            }
-            
-            document.body.appendChild(tempForm);
-            tempForm.submit();
-        }
+        const response = await fetch(fetchUrl, fetchOptions);
+        const responseText = await response.text();
+        const blob = new Blob([responseText], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
+        window.location.href = blobUrl;
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        
     } catch (error) {
         alert('Error: ' + error.message);
     }
