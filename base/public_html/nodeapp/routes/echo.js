@@ -15,6 +15,13 @@ router.all('/echo-nodejs', (req, res) => {
         req.socket?.remoteAddress ||
         'Not specified';
     
+    let intendedMethod = method;
+    if (method === 'GET' && req.query._method) {
+        intendedMethod = req.query._method;
+    } else if (method === 'POST' && req.body._method) {
+        intendedMethod = req.body._method;
+    }
+    
     let html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,7 +37,8 @@ router.all('/echo-nodejs', (req, res) => {
     <h1>NodeJS Echo Response</h1>
     <h2>Request Information</h2>
     <p><strong>HTTP Protocol:</strong> ${escapeHTML(protocol)}</p>
-    <p><strong>HTTP Method:</strong> ${escapeHTML(method)}</p>
+    <p><strong>HTTP Method:</strong> ${escapeHTML(intendedMethod)}</p>
+    <p><strong>Actual HTTP Method:</strong> ${escapeHTML(method)}</p>
     <p><strong>Content-Type:</strong> ${escapeHTML(contentType)}</p>
     <p><strong>Hostname:</strong> ${escapeHTML(hostname)}</p>
     <p><strong>Date/Time:</strong> ${escapeHTML(dateTime)}</p>
@@ -43,14 +51,15 @@ router.all('/echo-nodejs', (req, res) => {
         if (Object.keys(params).length > 0) {
             html += '  <ul>';
             for (const [key, value] of Object.entries(params)) {
-                html += `    <li><strong>${escapeHTML(key)}:</strong> ${escapeHTML(value)}</li>`;
+                if (key !== '_method' && key !== '_encoding') {
+                    html += `    <li><strong>${escapeHTML(key)}:</strong> ${escapeHTML(value)}</li>`;
+                }
             }
             html += '  </ul>';
         } else {
             html += '  <p>No query parameters received.</p>';
         }
     } else {
-        // Handle POST, PUT, DELETE
         const data = req.body;
         const isJson = contentType.includes('application/json');
         
@@ -67,7 +76,9 @@ router.all('/echo-nodejs', (req, res) => {
             } else {
                 html += '  <ul>';
                 for (const [key, value] of Object.entries(data)) {
-                    html += `    <li><strong>${escapeHTML(key)}:</strong> ${escapeHTML(String(value))}</li>`;
+                    if (key !== '_method' && key !== '_encoding') {
+                        html += `    <li><strong>${escapeHTML(key)}:</strong> ${escapeHTML(String(value))}</li>`;
+                    }
                 }
                 html += '  </ul>';
             }
