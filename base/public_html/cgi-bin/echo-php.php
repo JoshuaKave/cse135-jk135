@@ -12,8 +12,16 @@ $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
 $intendedMethod = $method;
 if ($method === 'GET' && isset($_GET['_method'])) {
     $intendedMethod = $_GET['_method'];
-} elseif ($method === 'POST' && isset($_POST['_method'])) {
-    $intendedMethod = $_POST['_method'];
+} elseif ($method === 'POST') {
+    if (strpos($contentType, 'application/json') !== false) {
+        $json = file_get_contents('php://input');
+        $jsonData = json_decode($json, true);
+        if ($jsonData && isset($jsonData['_method'])) {
+            $intendedMethod = $jsonData['_method'];
+        }
+    } elseif (isset($_POST['_method'])) {
+        $intendedMethod = $_POST['_method'];
+    }
 }
 
 echo "<!DOCTYPE html>";
@@ -62,14 +70,7 @@ if ($method === 'GET') {
         $isJson = true;
         echo "  <h2>JSON Body</h2>";
     } else {
-        if ($method === 'POST') {
-            $data = $_POST;
-        } else {
-            $input = file_get_contents('php://input');
-            if (!empty($input)) {
-                parse_str($input, $data);
-            }
-        }
+        $data = $_POST;
         echo "  <h2>Form Data</h2>";
     }
     

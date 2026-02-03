@@ -4,6 +4,7 @@ const cookieParser = require("cookie-parser");
 const helloRoutes = require("./routes/hello");
 const envRoutes = require("./routes/env");
 const stateRoutes = require("./routes/state");
+const echoRoutes = require("./routes/echo");
 
 const app = express();
 app.set("trust proxy", true);
@@ -17,6 +18,7 @@ app.get("/ping", (req, res) => res.json({ ok: true }));
 app.use(helloRoutes);
 app.use(envRoutes);
 app.use(stateRoutes);
+app.use(echoRoutes);
 
 app.listen(3000, "127.0.0.1", () => {
   console.log("Express listening on http://127.0.0.1:3000");

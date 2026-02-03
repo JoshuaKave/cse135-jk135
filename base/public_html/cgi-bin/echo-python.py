@@ -20,21 +20,23 @@ content_length = int(os.environ.get('CONTENT_LENGTH', 0))
 if content_length > 0:
     body = sys.stdin.read(content_length)
 
-params = {}
+intended_method = method
 if method == 'GET':
     params = parse_qs(query_string)
+    if '_method' in params:
+        intended_method = params['_method'][0]
 else:
     if 'application/json' in content_type:
         try:
-            params = {k: [v] for k, v in json.loads(body).items()}
+            json_data = json.loads(body)
+            if '_method' in json_data:
+                intended_method = json_data['_method']
         except:
-            params = {}
+            pass
     else:
         params = parse_qs(body)
-
-intended_method = params.get('_method', [method])[0]
-if isinstance(intended_method, list):
-    intended_method = intended_method[0] if intended_method else method
+        if '_method' in params:
+            intended_method = params['_method'][0]
 
 print("Content-Type: text/html; charset=UTF-8")
 print()
@@ -76,11 +78,7 @@ if method == 'GET':
         print("  <p>No query parameters received.</p>")
 else:
     # Handle POST, PUT, DELETE
-    content_length = int(os.environ.get('CONTENT_LENGTH', 0))
-    
     if content_length > 0:
-        body = sys.stdin.read(content_length)
-        
         if 'application/json' in content_type:
             print("  <h2>JSON Body</h2>")
             try:
