@@ -134,14 +134,34 @@ form.addEventListener('submit', async (event) => {
         }
     }
 
-    // Send request and open response in new window
+    // Redirect to the response page
     try {
-        const response = await fetch(fetchUrl, fetchOptions);
-        const html = await response.text();
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-            newWindow.document.write(html);
-            newWindow.document.close();
+        if (selectedMethod === 'GET') {
+            window.location.href = fetchUrl;
+        } 
+        else {
+            const tempForm = document.createElement('form');
+            tempForm.method = selectedMethod;
+            tempForm.action = url;
+            
+            if (selectedEncoding === 'application/json') {
+                const jsonInput = document.createElement('input');
+                jsonInput.type = 'hidden';
+                jsonInput.name = 'json_data';
+                jsonInput.value = JSON.stringify(data);
+                tempForm.appendChild(jsonInput);
+            } else {
+                for (const [key, value] of Object.entries(data)) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = value;
+                    tempForm.appendChild(input);
+                }
+            }
+            
+            document.body.appendChild(tempForm);
+            tempForm.submit();
         }
     } catch (error) {
         alert('Error: ' + error.message);
