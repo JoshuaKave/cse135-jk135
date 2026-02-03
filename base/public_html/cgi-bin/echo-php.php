@@ -9,6 +9,13 @@ $dateTime = date('c');
 $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
 $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
 
+$intendedMethod = $method;
+if ($method === 'GET' && isset($_GET['_method'])) {
+    $intendedMethod = $_GET['_method'];
+} elseif ($method === 'POST' && isset($_POST['_method'])) {
+    $intendedMethod = $_POST['_method'];
+}
+
 echo "<!DOCTYPE html>";
 echo "<html lang='en'>";
 echo "<head>";
@@ -24,7 +31,8 @@ echo "<section>";
 echo "  <h1>PHP Echo Response</h1>";
 echo "  <h2>Request Information</h2>";
 echo "  <p><strong>HTTP Protocol:</strong> " . htmlspecialchars($protocol) . "</p>";
-echo "  <p><strong>HTTP Method:</strong> " . htmlspecialchars($method) . "</p>";
+echo "  <p><strong>HTTP Method:</strong> " . htmlspecialchars($intendedMethod) . "</p>";
+echo "  <p><strong>Actual HTTP Method:</strong> " . htmlspecialchars($method) . "</p>";
 echo "  <p><strong>Content-Type:</strong> " . htmlspecialchars($contentType) . "</p>";
 echo "  <p><strong>Hostname:</strong> " . htmlspecialchars($hostname) . "</p>";
 echo "  <p><strong>Date/Time:</strong> " . htmlspecialchars($dateTime) . "</p>";
@@ -36,7 +44,9 @@ if ($method === 'GET') {
     if (!empty($_GET)) {
         echo "  <ul>";
         foreach ($_GET as $key => $value) {
-            echo "    <li><strong>" . htmlspecialchars($key) . ":</strong> " . htmlspecialchars($value) . "</li>";
+            if ($key !== '_method' && $key !== '_encoding') {
+                echo "    <li><strong>" . htmlspecialchars($key) . ":</strong> " . htmlspecialchars($value) . "</li>";
+            }
         }
         echo "  </ul>";
     } else {
@@ -69,7 +79,9 @@ if ($method === 'GET') {
         } else {
             echo "  <ul>";
             foreach ($data as $key => $value) {
-                echo "    <li><strong>" . htmlspecialchars($key) . ":</strong> " . htmlspecialchars($value) . "</li>";
+                if ($key !== '_method' && $key !== '_encoding') {
+                    echo "    <li><strong>" . htmlspecialchars($key) . ":</strong> " . htmlspecialchars($value) . "</li>";
+                }
             }
             echo "  </ul>";
         }

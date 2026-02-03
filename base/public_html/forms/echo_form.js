@@ -91,12 +91,12 @@ function updateFields() {
     dynamicFields.innerHTML = fieldsHTML;
 }
 
-form.addEventListener('submit', async (event) => {
+form.addEventListener('submit', (event) => {
     event.preventDefault();
 
     const selectedLanguage = languageSelect.value;
     const selectedMethod = methodSelect.value.toUpperCase();
-    const selectedEncoding = encodingSelect.value || 'Not applicable';
+    const selectedEncoding = encodingSelect.value || 'application/x-www-form-urlencoded';
 
     if (!selectedLanguage || !selectedMethod) {
         alert('Please select both a language and a method');
@@ -104,43 +104,51 @@ form.addEventListener('submit', async (event) => {
     }
 
     const url = routes[selectedLanguage];
+    
     const formData = new FormData(form);
     const data = {};
-    for (let [key, value] of formData.entries()) {
+    for (const [key, value] of formData.entries()) {
         if (key !== 'language' && key !== 'method' && key !== 'encoding') {
             data[key] = value;
         }
     }
 
-    let fetchUrl = url;
-    let fetchOptions = { 
-        method: selectedMethod,
-        headers: {}
-    };
+    data['_method'] = selectedMethod;
+    data['_encoding'] = selectedEncoding;
 
     if (selectedMethod === 'GET') {
         const params = new URLSearchParams(data);
-        if (params.toString()) {
-            fetchUrl = `${url}?${params.toString()}`;
-        }
-    } else {
-        if (selectedEncoding === 'application/json') {
-            fetchOptions.headers['Content-Type'] = 'application/json';
-            fetchOptions.body = JSON.stringify(data);
-        } else {
-            fetchOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-            fetchOptions.body = new URLSearchParams(data).toString();
-        }
+        window.location.href = `${url}?${params.toString()}`;
+        return;
     }
-    try {
-        const response = await fetch(fetchUrl, fetchOptions);
-        const responseText = await response.text();
-        const blob = new Blob([responseText], { type: 'text/html' });
-        const blobUrl = URL.createObjectURL(blob);
-        window.location.href = blobUrl;
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    if (selectedEncoding === 'application/json') {
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => response.text())
+          .then(html => {
+              document.open();
+              document.write(html);
+              document.close();
+          });
+    } else {
+        const tempForm = document.createElement('form');
+        tempForm.style.display = 'none';
+        tempForm.action = url;
+        tempForm.method = 'POST';
         
-    } catch (error) {
-        alert('Error: ' + error.message);
+        for (const [key, value] of Object.entries(data)) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            tempForm.appendChild(input);
+        }
+        
+        document.body.appendChild(tempForm);
+        tempForm.submit();
     }
 });

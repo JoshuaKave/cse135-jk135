@@ -15,6 +15,27 @@ user_agent = os.environ.get('HTTP_USER_AGENT', 'Unknown')
 remote_addr = os.environ.get('REMOTE_ADDR', 'Unknown')
 timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
+body = ''
+content_length = int(os.environ.get('CONTENT_LENGTH', 0))
+if content_length > 0:
+    body = sys.stdin.read(content_length)
+
+params = {}
+if method == 'GET':
+    params = parse_qs(query_string)
+else:
+    if 'application/json' in content_type:
+        try:
+            params = {k: [v] for k, v in json.loads(body).items()}
+        except:
+            params = {}
+    else:
+        params = parse_qs(body)
+
+intended_method = params.get('_method', [method])[0]
+if isinstance(intended_method, list):
+    intended_method = intended_method[0] if intended_method else method
+
 print("Content-Type: text/html; charset=UTF-8")
 print()
 
@@ -33,7 +54,8 @@ print("<section>")
 print("  <h1>Python Echo Response</h1>")
 print("  <h2>Request Information</h2>")
 print(f"  <p><strong>HTTP Protocol:</strong> {escape(protocol)}</p>")
-print(f"  <p><strong>HTTP Method:</strong> {escape(method)}</p>")
+print(f"  <p><strong>HTTP Method:</strong> {escape(intended_method)}</p>")
+print(f"  <p><strong>Actual HTTP Method:</strong> {escape(method)}</p>")
 print(f"  <p><strong>Content-Type:</strong> {escape(content_type)}</p>")
 print(f"  <p><strong>Hostname:</strong> {escape(hostname)}</p>")
 print(f"  <p><strong>Date/Time:</strong> {escape(timestamp)}</p>")
@@ -46,8 +68,9 @@ if method == 'GET':
         params = parse_qs(query_string)
         print("  <ul>")
         for key, values in params.items():
-            for value in values:
-                print(f"    <li><strong>{escape(key)}:</strong> {escape(value)}</li>")
+            if key not in ['_method', '_encoding']:
+                for value in values:
+                    print(f"    <li><strong>{escape(key)}:</strong> {escape(value)}</li>")
         print("  </ul>")
     else:
         print("  <p>No query parameters received.</p>")
@@ -72,8 +95,9 @@ else:
             if params:
                 print("  <ul>")
                 for key, values in params.items():
-                    for value in values:
-                        print(f"    <li><strong>{escape(key)}:</strong> {escape(value)}</li>")
+                    if key not in ['_method', '_encoding']:
+                        for value in values:
+                            print(f"    <li><strong>{escape(key)}:</strong> {escape(value)}</li>")
                 print("  </ul>")
             else:
                 print("  <p>No form data received.</p>")
