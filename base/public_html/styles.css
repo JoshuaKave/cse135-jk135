@@ -12,7 +12,6 @@
 
   --default-margin: 0.5rem;
   --default-padding: 1rem;
-  margin: var(--default-margin, 0.5rem);
 }
 
 body {
@@ -72,6 +71,7 @@ main.container {
 ul {
   list-style-type: none;
   padding: 0;
+  gap: 1rem;
 }
 
 a {
@@ -109,6 +109,7 @@ section h2 {
 
 section li {
   padding: 0.5rem 0;
+  flex: 1 1 auto;
 }
 
 details summary {
@@ -126,6 +127,13 @@ details ul {
   margin-top: 0.5rem;
   padding-left: 1.5rem;
   border-left: 2px solid var(--sea-foam);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+details ul li {
+  flex: 0 0 auto;
 }
 
 @media (max-width: 768px) {
