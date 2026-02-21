@@ -45,3 +45,11 @@ jobs:
             -e "ssh -p ${{ secrets.REMOTE_PORT }}" \
             reporting/ \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/reporting.jk135.site/
+     
+      - name: Deploy test.site
+        run: |
+          rsync -azv --delete \
+            --exclude-from="deploy/exclude.txt" \
+            -e "ssh -p ${{ secrets.REMOTE_PORT }}" \
+            test/ \
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/var/www/test.jk135.site/
