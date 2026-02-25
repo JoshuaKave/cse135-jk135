@@ -7,7 +7,7 @@ const PORT = 3005;
 const LOG_FILE = path.join(__dirname, 'analytics.jsonl');
 
 app.use((req, res, next) =>{
-    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Origin', 'https://test.jk135.site'); // Change to your allowed origin(s)
     res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     if (req.method === 'OPTIONS') {
