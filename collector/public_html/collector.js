@@ -1,134 +1,242 @@
-// collector-v3.js â€” Analytics Collector with Configurable Endpoint
-// Extends v1/v2: technographics, session identity, configurable endpoint,
-// and cascading delivery (sendBeacon â†’ fetch keepalive â†’ fetch)
-//
-// Change ENDPOINT to point at your analytics server.
+/**
+ * collector-v4.js â€” Analytics Collector with Performance Timing
+ * CSE 135 - Module 05: Performance Timing
+ *
+ * Extends previous collectors with:
+ *   - getNavigationTiming(): DNS, TCP, TLS, TTFB, DOM milestones
+ *   - getResourceSummary(): resource counts, sizes, durations by type
+ *   - Timing collection after load event with setTimeout delay
+ *
+ * Carries forward from v2/v3:
+ *   - getSessionId(): session identity via sessionStorage
+ *   - getTechnographics(): browser, device, screen, network, preferences
+ *
+ * Usage: Include this script in any HTML page.
+ *        Open the browser console to see collected data.
+ */
 
-(function() {
+(function () {
   'use strict';
 
-  // ---- Configuration ----
-  const ENDPOINT = 'https://collector.jk135.site/collect'; // Change to your endpoint URL
+  // ── Configuration ───────────────────────────────────────────────────────
+  const ENDPOINT = 'https://example.com/collect';  // Replace with your endpoint
 
-  // ---- Session Identity (same approach as v2) ----
-  const sessionId = (function() {
-    const key = '_collector_sid';
-    const existing = sessionStorage.getItem(key);
-    if (existing) return existing;
-    const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-    sessionStorage.setItem(key, id);
-    return id;
-  })();
+  // ── Utility ─────────────────────────────────────────────────────────────
+  /**
+   * Round a number to two decimal places.
+   */
+  function round(n) {
+    return Math.round(n * 100) / 100;
+  }
 
-  // ---- Technographic Data ----
-  function getTechData() {
-    const data = {
-      screenWidth: screen.width,
-      screenHeight: screen.height,
+  // ── Session Identity ───────────────────────────────────────────────────
+
+  /**
+   * Generate or retrieve a session ID from sessionStorage.
+   * Persists across page navigations within the same tab.
+   * Clears automatically when the tab or browser closes.
+   */
+  function getSessionId() {
+    let sid = sessionStorage.getItem('_collector_sid');
+    if (!sid) {
+      sid = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      sessionStorage.setItem('_collector_sid', sid);
+    }
+    return sid;
+  }
+
+  // ── Network Information ─────────────────────────────────────────────────
+
+  /**
+   * Collect network connection data via the Network Information API.
+   * Returns an empty object if the API is unavailable.
+   */
+  function getNetworkInfo() {
+    if (!('connection' in navigator)) return {};
+
+    const conn = navigator.connection;
+    return {
+      effectiveType: conn.effectiveType,
+      downlink: conn.downlink,
+      rtt: conn.rtt,
+      saveData: conn.saveData
+    };
+  }
+
+  // ── Technographics ─────────────────────────────────────────────────────
+
+  /**
+   * Collect a complete technographic profile of the user's environment.
+   */
+  function getTechnographics() {
+    return {
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      cookiesEnabled: navigator.cookieEnabled,
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
-      devicePixelRatio: window.devicePixelRatio || 1,
-      language: navigator.language,
-      platform: navigator.platform,
-      cookiesEnabled: navigator.cookieEnabled,
-      touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      screenWidth: window.screen.width,
+      screenHeight: window.screen.height,
+      pixelRatio: window.devicePixelRatio,
+      cores: navigator.hardwareConcurrency || 0,
+      memory: navigator.deviceMemory || 0,
+      network: getNetworkInfo(),
+      colorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark' : 'light',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
     };
-
-    // Network Information API (Chromium browsers)
-    if (navigator.connection) {
-      data.connectionType = navigator.connection.effectiveType || '';
-      data.connectionDownlink = navigator.connection.downlink || '';
-    }
-
-    return data;
   }
 
-  // ---- Cascading Delivery ----
+  // ── Navigation Timing ───────────────────────────────────────────────────
+
+  /**
+   * Extract key performance milestones from the Navigation Timing API.
+   * Returns an object with durations in milliseconds, or an empty
+   * object if the API is unavailable.
+   */
+  function getNavigationTiming() {
+    const entries = performance.getEntriesByType('navigation');
+    if (!entries.length) return {};
+
+    const n = entries[0];
+
+    return {
+      // DNS lookup time
+      dnsLookup: round(n.domainLookupEnd - n.domainLookupStart),
+      // TCP connection time
+      tcpConnect: round(n.connectEnd - n.connectStart),
+      // TLS handshake (HTTPS only)
+      tlsHandshake: n.secureConnectionStart > 0
+        ? round(n.connectEnd - n.secureConnectionStart) : 0,
+      // Time to First Byte
+      ttfb: round(n.responseStart - n.requestStart),
+      // Download time (response body)
+      download: round(n.responseEnd - n.responseStart),
+      // DOM interactive (HTML parsed, subresources may still load)
+      domInteractive: round(n.domInteractive - n.fetchStart),
+      // DOM complete (all resources loaded)
+      domComplete: round(n.domComplete - n.fetchStart),
+      // Full page load (through load event)
+      loadEvent: round(n.loadEventEnd - n.fetchStart),
+      // Total fetch time (request + response)
+      fetchTime: round(n.responseEnd - n.fetchStart),
+      // Transfer size and header overhead
+      transferSize: n.transferSize,
+      headerSize: n.transferSize - n.encodedBodySize
+    };
+  }
+
+  // ── Resource Timing ─────────────────────────────────────────────────────
+
+  /**
+   * Aggregate resource timing data by initiator type.
+   * Returns total resource count and per-type breakdown of
+   * count, totalSize (bytes), and totalDuration (ms).
+   */
+  function getResourceSummary() {
+    const resources = performance.getEntriesByType('resource');
+
+    const summary = {
+      script:         { count: 0, totalSize: 0, totalDuration: 0 },
+      link:           { count: 0, totalSize: 0, totalDuration: 0 },
+      img:            { count: 0, totalSize: 0, totalDuration: 0 },
+      font:           { count: 0, totalSize: 0, totalDuration: 0 },
+      fetch:          { count: 0, totalSize: 0, totalDuration: 0 },
+      xmlhttprequest: { count: 0, totalSize: 0, totalDuration: 0 },
+      other:          { count: 0, totalSize: 0, totalDuration: 0 }
+    };
+
+    resources.forEach((r) => {
+      const type = summary[r.initiatorType] ? r.initiatorType : 'other';
+      summary[type].count++;
+      summary[type].totalSize += r.transferSize || 0;
+      summary[type].totalDuration += r.duration || 0;
+    });
+
+    return {
+      totalResources: resources.length,
+      byType: summary
+    };
+  }
+
+  // ── Payload Delivery ─────────────────────────────────────────────────────
+
+  /**
+   * Send the payload to the analytics endpoint via sendBeacon,
+   * falling back to fetch with keepalive.
+   */
   function send(payload) {
-    const json = JSON.stringify(payload);
-    const blob = new Blob([json], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
 
-    console.log(`[Collector v3] Sending to ${ENDPOINT}:`, payload);
-
-    // Strategy 1: sendBeacon (preferred â€” survives unload)
     if (navigator.sendBeacon) {
-      const sent = navigator.sendBeacon(ENDPOINT, blob);
-      if (sent) {
-        console.log('[Collector v3] sendBeacon succeeded');
-        return;
-      }
-      console.log('[Collector v3] sendBeacon returned false, trying fetch');
-    }
-
-    // Strategy 2: fetch with keepalive (survives unload, has response)
-    fetch(ENDPOINT, {
-      method: 'POST',
-      body: json,
-      headers: { 'Content-Type': 'application/json' },
-      keepalive: true
-    }).then((resp) => {
-      console.log('[Collector v3] fetch(keepalive) status:', resp.status);
-    }).catch(() => {
-      console.log('[Collector v3] fetch(keepalive) failed, trying plain fetch');
-      // Strategy 3: plain fetch (last resort)
+      navigator.sendBeacon(ENDPOINT, blob);
+      console.log('[collector-v4] Beacon sent');
+    } else {
       fetch(ENDPOINT, {
         method: 'POST',
-        body: json,
-        headers: { 'Content-Type': 'application/json' }
-      }).then((resp) => {
-        console.log('[Collector v3] plain fetch status:', resp.status);
+        body: blob,
+        keepalive: true
       }).catch((err) => {
-        console.log('[Collector v3] all delivery methods failed:', err.message);
+        console.warn('[collector-v4] fetch fallback error:', err.message);
       });
-    });
+    }
+
+    console.log('[collector-v4] payload:', payload);
   }
 
-  // ---- Collect and Send ----
-  function collect(eventType) {
+  // ── Collect & Send ───────────────────────────────────────────────────────
+
+  /**
+   * Build the full analytics payload and send it.
+   * Includes page data, session, technographics, and performance timing.
+   */
+  function collect() {
     const payload = {
       url: window.location.href,
       title: document.title,
       referrer: document.referrer,
       timestamp: new Date().toISOString(),
-      type: eventType || 'pageview',
-      sessionId: sessionId,
-      tech: getTechData()
+      type: 'pageview',
+      session: getSessionId(),
+      technographics: getTechnographics(),
+      timing: getNavigationTiming(),
+      resources: getResourceSummary()
     };
 
     send(payload);
+
+    // Dispatch a custom event so test pages can read the payload
+    window.dispatchEvent(new CustomEvent('collector:payload', { detail: payload }));
   }
 
-  // ---- Custom Event API ----
-  // Expose a function for sending custom events from the page
-  window.__collectorSendEvent = (eventType, eventData) => {
-    const payload = {
-      url: window.location.href,
-      title: document.title,
-      referrer: document.referrer,
-      timestamp: new Date().toISOString(),
-      type: eventType || 'custom',
-      sessionId: sessionId,
-      data: eventData || {}
-    };
+  // ── Triggers ─────────────────────────────────────────────────────────────
 
-    send(payload);
-  };
+  // Collect after the page is fully loaded, with a setTimeout delay
+  // to ensure loadEventEnd is populated.
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      console.log('[collector-v4] Page loaded â€” collecting performance timing');
+      collect();
+    }, 0);
+  });
 
-  // ---- Triggers ----
-
-  // Fire on page load
-  if (document.readyState === 'complete') {
-    collect('pageview');
-  } else {
-    window.addEventListener('load', () => {
-      collect('pageview');
-    });
-  }
-
-  // Fire when user leaves (captures departures)
+  // Collect again when the page is being hidden (tab close, navigation away)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      collect('pagehide');
+      console.log('[collector-v4] Page hidden â€” sending exit beacon');
+      collect();
     }
   });
+
+  // ── Expose for test page ─────────────────────────────────────────────────
+
+  window.__collector = {
+    getNavigationTiming: getNavigationTiming,
+    getResourceSummary: getResourceSummary,
+    getTechnographics: getTechnographics(),
+    getSessionId: getSessionId,
+    getNetworkInfo: getNetworkInfo,
+    collect: collect
+  };
+
 })();
