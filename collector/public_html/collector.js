@@ -59,6 +59,12 @@
   let pageShowTime = Date.now();
   let totalVisibleTime = 0;
 
+  // Activity Tracking State
+  const mouseMovements = [];
+  const MAX_MOUSE_MOVEMENTS = 100;
+  let lastMouseMoveTime = 0;
+  const MOUSE_THROTTLE_MS = 100; // Capture at most 10 positions per second
+
   // Utility
   /**
    * Round a number to two decimal places.
@@ -535,6 +541,48 @@
     window.dispatchEvent(new CustomEvent('collector:payload', { detail: payload }));
   }
 
+  // Mouse Movement Tracking
+
+  /**
+   * Initialize mouse movement tracking with throttling.
+   * Captures cursor positions at most every 100ms to avoid data overload.
+   */
+  function initMouseTracking() {
+    document.addEventListener('mousemove', (event) => {
+      const now = Date.now();
+      
+      // Throttle: only capture if enough time has passed
+      if (now - lastMouseMoveTime < MOUSE_THROTTLE_MS) return;
+      lastMouseMoveTime = now;
+
+      const movement = {
+        x: event.clientX,
+        y: event.clientY,
+        pageX: event.pageX,
+        pageY: event.pageY,
+        timestamp: now
+      };
+
+      mouseMovements.push(movement);
+
+      // Keep buffer from growing too large
+      if (mouseMovements.length > MAX_MOUSE_MOVEMENTS) {
+        mouseMovements.shift();
+      }
+    });
+  }
+
+  /**
+   * Get captured mouse movements and optionally clear the buffer.
+   */
+  function getMouseMovements(clear = false) {
+    const movements = [...mouseMovements];
+    if (clear) {
+      mouseMovements.length = 0;
+    }
+    return movements;
+  }
+
   // Time-on-Page Tracking
 
   /**
@@ -546,7 +594,7 @@
       if (document.visibilityState === 'hidden') {
         totalVisibleTime += Date.now() - pageShowTime;
 
-        // Send exit beacon with time-on-page
+        // Send exit beacon with time-on-page and activity data
         const exitPayload = {
           type: 'page_exit',
           url: window.location.href,
@@ -554,7 +602,10 @@
           vitals: getWebVitals(),
           errorCount: errorCount,
           timestamp: new Date().toISOString(),
-          session: getSessionId()
+          session: getSessionId(),
+          activity: {
+            mouseMovements: getMouseMovements(true)
+          }
         };
 
         // Let plugins flush on exit
@@ -566,7 +617,7 @@
 
         send(exitPayload);
       } else {
-        // Page became visible again â€” reset the timer
+        // Page became visible again — reset the timer
         pageShowTime = Date.now();
       }
     });
@@ -650,6 +701,7 @@
       if (config.enableVitals) initWebVitals();
       if (config.enableErrors) initErrorTracking();
       initTimeOnPage();
+      initMouseTracking();
 
       // Process retry queue from previous page
       processRetryQueue();
@@ -744,6 +796,7 @@
     isJavaScriptEnabled: checkJavaScriptEnabled,
     checkImagesEnabled: checkImagesEnabled,
     checkCSSEnabled: checkCSSEnabled,
+    getMouseMovements: getMouseMovements,
     getErrorCount: () => errorCount,
     getConfig: () => config,
     isBlocked: () => blocked,
