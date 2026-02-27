@@ -179,6 +179,44 @@
   }
 
   /**
+   * Check if JavaScript is enabled.
+   */
+  function checkJavaScriptEnabled() {
+    return true;
+  }
+
+  /**
+   * Check if images are enabled/allowed.
+   * Returns a promise that resolves to true/false.
+   */
+  function checkImagesEnabled() {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      // 1x1 transparent GIF
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      // Timeout fallback
+      setTimeout(() => resolve(false), 1000);
+    });
+  }
+
+  /**
+   * Check if CSS is enabled/allowed.
+   */
+  function checkCSSEnabled() {
+    const testEl = document.createElement('div');
+    testEl.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px;';
+    document.body.appendChild(testEl);
+    
+    const computed = window.getComputedStyle(testEl);
+    const cssEnabled = computed.width === '1px' && computed.position === 'absolute';
+    
+    document.body.removeChild(testEl);
+    return cssEnabled;
+  }
+
+  /**
    * Collect a complete technographic profile.
    */
   function getTechnographics() {
@@ -186,6 +224,8 @@
       userAgent: navigator.userAgent,
       language: navigator.language,
       cookiesEnabled: navigator.cookieEnabled,
+      javascriptEnabled: checkJavaScriptEnabled(),
+      cssEnabled: checkCSSEnabled(),
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
       screenWidth: window.screen.width,
@@ -454,7 +494,9 @@
   /**
    * Build and send the full pageview payload.
    */
-  function collect(type) {
+  async function collect(type) {
+    const imagesEnabled = await checkImagesEnabled();
+    
     let payload = {
       type: type || 'pageview',
       url: window.location.href,
@@ -462,7 +504,10 @@
       referrer: document.referrer,
       timestamp: new Date().toISOString(),
       session: getSessionId(),
-      technographics: getTechnographics(),
+      technographics: {
+        ...getTechnographics(),
+        imagesEnabled: imagesEnabled
+      },
       timing: getNavigationTiming(),
       resources: getResourceSummary(),
       vitals: getWebVitals(),
@@ -696,6 +741,9 @@
     hasConsent: hasConsent,
     isBot: isBot,
     isSampled: isSampled,
+    isJavaScriptEnabled: checkJavaScriptEnabled,
+    checkImagesEnabled: checkImagesEnabled,
+    checkCSSEnabled: checkCSSEnabled,
     getErrorCount: () => errorCount,
     getConfig: () => config,
     isBlocked: () => blocked,
