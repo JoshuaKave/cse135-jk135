@@ -1,5 +1,5 @@
 /**
- * consent.js â€” Consent Management Module
+ * consent.js Consent Management Module
  * CSE 135 - Module 10: Production Readiness
  *
  * Provides a ConsentManager object for checking, granting, and revoking
@@ -46,7 +46,7 @@ const ConsentManager = (function () {
       }
     }
 
-    // No consent cookie found â€” default to false (opt-in model)
+    // No consent cookie found default to false (opt-in model)
     return false;
   }
 
@@ -111,6 +111,7 @@ const ConsentManager = (function () {
     const cookies = document.cookie.split(';');
     for (const c of cookies) {
       if (c.trim().indexOf('analytics_consent=') === 0) {
+        console.log('[ConsentManager] Consent already set, banner will not be shown');
         return; // Already decided
       }
     }
