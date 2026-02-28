@@ -768,7 +768,7 @@
       }
       plugins.push(plugin);
       if (typeof plugin.init === 'function') {
-        plugin.init(config);
+        plugin.init(publicAPI); 
       }
       console.log(`[Collector] Plugin registered: ${plugin.name || '(unnamed)'}`);
     }
