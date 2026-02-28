@@ -58,6 +58,7 @@
   // Time-on-Page State
   let pageShowTime = Date.now();
   let totalVisibleTime = 0;
+  const pageEntryTime = Date.now();  // Record when user entered the page
 
   // Activity Tracking State
   const mouseMovements = [];
@@ -518,6 +519,7 @@
       referrer: document.referrer,
       timestamp: new Date().toISOString(),
       session: getSessionId(),
+      pageEntryTime: new Date(pageEntryTime).toISOString(),
       technographics: {
         ...getTechnographics(),
         imagesEnabled: imagesEnabled
@@ -690,6 +692,8 @@
         const exitPayload = {
           type: 'page_exit',
           url: window.location.href,
+          pageEntryTime: new Date(pageEntryTime).toISOString(),
+          pageExitTime: new Date().toISOString(),
           timeOnPage: totalVisibleTime,
           vitals: getWebVitals(),
           errorCount: errorCount,
@@ -894,6 +898,7 @@
     checkCSSEnabled: checkCSSEnabled,
     getMouseMovements: getMouseMovements,
     getIdlePeriods: getIdlePeriods,
+    getPageEntryTime: () => new Date(pageEntryTime).toISOString(),
     getErrorCount: () => errorCount,
     getConfig: () => config,
     isBlocked: () => blocked,
