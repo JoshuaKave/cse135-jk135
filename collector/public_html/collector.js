@@ -166,14 +166,30 @@
   // Session Identity
 
   /**
-   * Generate or retrieve a session ID from sessionStorage.
+   * Generate or retrieve a session ID.
    */
   function getSessionId() {
-    let sid = sessionStorage.getItem('_collector_sid');
-    if (!sid) {
-      sid = Math.random().toString(36).substring(2) + Date.now().toString(36);
-      sessionStorage.setItem('_collector_sid', sid);
+    const cookieName = '_collector_sid';
+    const sessionDuration = 30 * 60;
+    
+    const cookies = document.cookie.split(';');
+    for (const c of cookies) {
+      const cookie = c.trim();
+      if (cookie.indexOf(cookieName + '=') === 0) {
+        const sid = cookie.split('=')[1];
+        document.cookie = `${cookieName}=${sid}; path=/; max-age=${sessionDuration}; SameSite=Lax`;
+        return sid;
+      }
     }
+    
+    const sid = 's_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+    
+    document.cookie = `${cookieName}=${sid}; path=/; max-age=${sessionDuration}; SameSite=Lax`;
+    
+    try {
+      sessionStorage.setItem(cookieName, sid);
+    } catch (e) { /* sessionStorage unavailable */ }
+    
     return sid;
   }
 

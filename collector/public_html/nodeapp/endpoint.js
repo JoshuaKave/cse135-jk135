@@ -22,6 +22,11 @@ app.use(express.json());
 app.post('/collect', (req, res) => {
   const payload = req.body;
 
+  const cookieSessionId = req.cookies._collector_sid;  // From cookie
+  const payloadSessionId = payload.session;            // From JSON body
+    
+  console.log('Session:', cookieSessionId);
+
   // Validate: must have url and type at minimum
   if (!payload || !payload.url || !payload.type) {
     return res.status(400).json({ error: 'Missing required fields: url, type' });
