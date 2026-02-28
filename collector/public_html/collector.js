@@ -65,6 +65,14 @@
   let lastMouseMoveTime = 0;
   const MOUSE_THROTTLE_MS = 100; // Capture at most 10 positions per second
 
+  // Idle Time Tracking State
+  const idlePeriods = [];
+  const MAX_IDLE_PERIODS = 50;
+  const IDLE_THRESHOLD_MS = 2000; // 2 seconds
+  let lastActivityTime = Date.now();
+  let idleStartTime = null;
+  let idleCheckInterval = null;
+
   // Utility
   /**
    * Round a number to two decimal places.
@@ -583,6 +591,90 @@
     return movements;
   }
 
+  // Idle Time Tracking
+
+  /**
+   * Record user activity to reset idle timer.
+   */
+  function recordActivity() {
+    const now = Date.now();
+
+    // If we were idle, record the idle period
+    if (idleStartTime !== null) {
+      const idleDuration = now - idleStartTime;
+      if (idleDuration >= IDLE_THRESHOLD_MS) {
+        idlePeriods.push({
+          startTime: idleStartTime,
+          endTime: now,
+          duration: idleDuration
+        });
+
+        // Cap the buffer
+        if (idlePeriods.length > MAX_IDLE_PERIODS) {
+          idlePeriods.shift();
+        }
+      }
+      idleStartTime = null;
+    }
+
+    lastActivityTime = now;
+  }
+
+  /**
+   * Check if user has become idle.
+   */
+  function checkIdle() {
+    const now = Date.now();
+    const timeSinceActivity = now - lastActivityTime;
+
+    // If idle threshold reached and not already tracking idle
+    if (timeSinceActivity >= IDLE_THRESHOLD_MS && idleStartTime === null) {
+      idleStartTime = lastActivityTime;
+    }
+  }
+
+  /**
+   * Initialize idle time tracking.
+   * Listens for mouse, keyboard, scroll, and click events.
+   */
+  function initIdleTracking() {
+    // Activity events that reset idle timer
+    const activityEvents = ['mousemove', 'keydown', 'keyup', 'click', 'scroll', 'touchstart', 'touchmove'];
+
+    activityEvents.forEach((eventType) => {
+      document.addEventListener(eventType, recordActivity, { passive: true });
+    });
+
+    // Check for idle state every 500ms
+    idleCheckInterval = setInterval(checkIdle, 500);
+  }
+
+  /**
+   * Get captured idle periods and optionally clear the buffer.
+   */
+  function getIdlePeriods(clear = false) {
+    // Check for any ongoing idle period
+    if (idleStartTime !== null) {
+      const now = Date.now();
+      const idleDuration = now - idleStartTime;
+      if (idleDuration >= IDLE_THRESHOLD_MS) {
+        idlePeriods.push({
+          startTime: idleStartTime,
+          endTime: now,
+          duration: idleDuration,
+          ongoing: true
+        });
+        idleStartTime = now; // Reset for continued tracking
+      }
+    }
+
+    const periods = [...idlePeriods];
+    if (clear) {
+      idlePeriods.length = 0;
+    }
+    return periods;
+  }
+
   // Time-on-Page Tracking
 
   /**
@@ -604,7 +696,8 @@
           timestamp: new Date().toISOString(),
           session: getSessionId(),
           activity: {
-            mouseMovements: getMouseMovements(true)
+            mouseMovements: getMouseMovements(true),
+            idlePeriods: getIdlePeriods(true)
           }
         };
 
@@ -617,7 +710,10 @@
 
         send(exitPayload);
       } else {
+        // Page became visible again — reset the timer
         pageShowTime = Date.now();
+        // Also record activity since user returned
+        recordActivity();
       }
     });
   }
@@ -701,6 +797,7 @@
       if (config.enableErrors) initErrorTracking();
       initTimeOnPage();
       initMouseTracking();
+      initIdleTracking();
 
       // Process retry queue from previous page
       processRetryQueue();
@@ -796,6 +893,7 @@
     checkImagesEnabled: checkImagesEnabled,
     checkCSSEnabled: checkCSSEnabled,
     getMouseMovements: getMouseMovements,
+    getIdlePeriods: getIdlePeriods,
     getErrorCount: () => errorCount,
     getConfig: () => config,
     isBlocked: () => blocked,
