@@ -5,7 +5,7 @@ const Database = require('better-sqlite3');
 const app = express();
 const PORT = 3006;
 
-const DB_FILE = path.join(__dirname, '../../..', 'collector/public_html/nodeapp/analytics.db');
+const DB_FILE = path.join(__dirname, '../../..', 'collector.jk135.site/public_html/nodeapp/analytics.db');
 const db = new Database(DB_FILE, { readonly: false });
 console.log('Connected to SQLite database:', DB_FILE);
 
