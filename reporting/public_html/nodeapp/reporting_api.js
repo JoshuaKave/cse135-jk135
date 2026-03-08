@@ -1,6 +1,9 @@
 const express = require('express');
 const path = require('path');
 const Database = require('better-sqlite3');
+const session = require('express-session');
+const authRoutes = require('./routes/authRoutes');
+const pageRoutes = require('./routes/pageRoutes');
 
 const app = express();
 const PORT = 3006;
@@ -10,6 +13,12 @@ const db = new Database(DB_FILE, { readonly: false });
 console.log('Connected to SQLite database:', DB_FILE);
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(session({
+  secret: 'reporting-simple-secret',
+  resave: false,
+  saveUninitialized: false
+}));
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -184,6 +193,10 @@ app.get('/api/stats/summary', (req, res) => {
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '..')));
+
+// Simple MVC web routes for login + protected pages
+app.use(authRoutes);
+app.use(pageRoutes);
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
