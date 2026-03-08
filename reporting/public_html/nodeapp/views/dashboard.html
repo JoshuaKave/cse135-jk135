@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard</title>
   <script src="https://cdn.zinggrid.com/zinggrid.min.js"></script>
+  <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
 </head>
 <body>
   <h1>Dashboard</h1>
@@ -14,7 +15,95 @@
     <a href="/logout">Logout</a>
   </nav>
   <p>This is a protected inner page.</p>
-  <zing-grid editor controls layout="row" page-size="5" src="http://localhost:3006/api/events">
-  </zing-grid>
+
+  <div>
+    <zing-grid
+      editor
+      controls
+      pager
+      page-size="10"
+      sort
+      filter
+      search
+      layout="row"
+      caption="Events"
+      src="https://reporting.jk135.site/api/events">
+    </zing-grid>
+  </div>
+
+  <h2>Event Volume Over Time</h2>
+  <div id="eventVolumeChart" style="width: 100%; height: 360px;"></div>
+
+  <h2>Event Type Breakdown</h2>
+  <div id="eventTypeChart" style="width: 100%; height: 360px;"></div>
+
+  <script>
+    const API_BASE = 'https://reporting.jk135.site/api';
+
+    async function loadCharts() {
+      try {
+        const [eventsRes, summaryRes] = await Promise.all([
+          fetch(`${API_BASE}/events?limit=500`),
+          fetch(`${API_BASE}/stats/summary`)
+        ]);
+
+        const events = await eventsRes.json();
+        const summary = await summaryRes.json();
+
+        // Chart 1: Event volume over time (group by minute)
+        const minuteBuckets = {};
+        events.forEach((e) => {
+          const ts = e.server_timestamp || e.client_timestamp;
+          if (!ts) return;
+          const d = new Date(ts);
+          if (isNaN(d.getTime())) return;
+
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} `
+            + `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+          minuteBuckets[key] = (minuteBuckets[key] || 0) + 1;
+        });
+
+        const sortedTimes = Object.keys(minuteBuckets).sort();
+        const volumeValues = sortedTimes.map((k) => minuteBuckets[k]);
+
+        zingchart.render({
+          id: 'eventVolumeChart',
+          data: {
+            type: 'line',
+            title: { text: 'Events per Minute' },
+            scaleX: {
+              label: { text: 'Time (minute)' },
+              labels: sortedTimes
+            },
+            scaleY: { label: { text: 'Event Count' } },
+            series: [{ values: volumeValues }]
+          },
+          height: 360,
+          width: '100%'
+        });
+
+        // Chart 2: Event type breakdown
+        const typeSeries = (summary.event_types || []).map((row) => ({
+          text: row.event_type || 'unknown',
+          values: [row.count || 0]
+        }));
+
+        zingchart.render({
+          id: 'eventTypeChart',
+          data: {
+            type: 'pie',
+            title: { text: 'Event Type Breakdown' },
+            series: typeSeries
+          },
+          height: 360,
+          width: '100%'
+        });
+      } catch (err) {
+        console.error('Failed to load chart data:', err);
+      }
+    }
+
+    loadCharts();
+  </script>
 </body>
 </html>
