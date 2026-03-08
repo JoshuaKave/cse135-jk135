@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard</title>
+  <script src="https://cdn.zinggrid.com/zinggrid.min.js"></script>
 </head>
 <body>
   <h1>Dashboard</h1>
@@ -13,5 +14,7 @@
     <a href="/logout">Logout</a>
   </nav>
   <p>This is a protected inner page.</p>
+  <zing-grid editor controls layout="row" page-size="5" src="http://localhost:3006/api/events">
+  </zing-grid>
 </body>
 </html>
