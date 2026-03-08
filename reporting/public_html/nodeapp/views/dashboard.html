@@ -93,6 +93,18 @@
           data: {
             type: 'pie',
             title: { text: 'Event Type Breakdown' },
+            plot: {
+              // show labels on slices
+              valueBox: {
+                placement: 'out',
+                text: '%t: %v (%npv%)',
+                fontSize: 12
+              },
+              tooltip: {
+                // %t = text, %v = value, %npv = percent
+                text: '%t\nCount: %v\nPercent: %npv%'
+              }
+            },
             series: typeSeries
           },
           height: 360,
