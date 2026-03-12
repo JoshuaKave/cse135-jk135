@@ -1,7 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const DB_FILE = path.join(__dirname, '../../../../..', 'collector.jk135.site/public_html/nodeapp/analytics.db');
+const DB_FILE = path.join(__dirname, '../../../..', 'collector.jk135.site/public_html/nodeapp/analytics.db');
 
 const ROLES = {
   SUPER_ADMIN: 'super_admin',
