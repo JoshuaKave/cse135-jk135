@@ -3,3 +3,5 @@
 .env
 **/.env
 **/public_html/nodeapp/node_modules/
+**/public_html/nodeapp/*.db
+**/public_html/nodeapp/*.jsonl
