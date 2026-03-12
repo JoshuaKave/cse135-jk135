@@ -6,6 +6,15 @@
   <title>Dashboard</title>
   <script src="https://cdn.zinggrid.com/zinggrid.min.js"></script>
   <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #1d2939; background: #f8fafc; }
+    nav { margin-bottom: 16px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 16px 0 24px; }
+    .card { background: #fff; border: 1px solid #d0d5dd; border-radius: 14px; padding: 16px; }
+    .pill { display: inline-block; margin: 4px 8px 0 0; padding: 5px 9px; border-radius: 999px; background: #e0e7ff; color: #3730a3; font-size: 12px; }
+    .hidden { display: none; }
+    .muted { color: #667085; }
+  </style>
 </head>
 <body>
   <h1>Dashboard</h1>
@@ -14,9 +23,29 @@
     <a href="/reports">Reports</a> |
     <a href="/logout">Logout</a>
   </nav>
-  <p>This is a protected inner page.</p>
+  <div class="card">
+    <h2 id="welcome">Loading access profile…</h2>
+    <p class="muted">This page now adapts to role-based and section-level access.</p>
+    <div id="permissionPills"></div>
+  </div>
 
-  <div>
+  <div class="grid">
+    <section id="performanceSection" class="card hidden">
+      <h2>Performance</h2>
+      <p class="muted">Event table, summary stats, and performance charting.</p>
+    </section>
+    <section id="behavioralSection" class="card hidden">
+      <h2>Behavioral</h2>
+      <p class="muted">Session-level behavioral exploration.</p>
+    </section>
+    <section id="adminSection" class="card hidden">
+      <h2>Admin</h2>
+      <p class="muted">User management visibility for super admins.</p>
+      <ul id="adminUsers"></ul>
+    </section>
+  </div>
+
+  <div id="eventsGridWrap" class="hidden">
     <zing-grid
       editor
       controls
@@ -27,21 +56,77 @@
       search
       layout="row"
       caption="Events"
-      src="https://reporting.jk135.site/api/events">
+      src="/api/events">
     </zing-grid>
   </div>
 
-  <h2>Event Volume Over Time</h2>
-  <div id="eventVolumeChart" style="width: 100%; height: 360px;"></div>
+  <section id="chartsWrap" class="hidden">
+    <h2>Event Volume Over Time</h2>
+    <div id="eventVolumeChart" style="width: 100%; height: 360px;"></div>
 
-  <h2>Event Type Breakdown</h2>
-  <div id="eventTypeChart" style="width: 100%; height: 360px;"></div>
+    <h2>Event Type Breakdown</h2>
+    <div id="eventTypeChart" style="width: 100%; height: 360px;"></div>
+  </section>
 
   <script>
-    const API_BASE = 'https://reporting.jk135.site/api';
+    const API_BASE = '/api';
+
+    function show(id, shouldShow) {
+      document.getElementById(id).classList.toggle('hidden', !shouldShow);
+    }
+
+    async function loadAccessConfig() {
+      const res = await fetch(`${API_BASE}/dashboard/config`);
+      if (!res.ok) {
+        throw new Error('Failed to load dashboard config');
+      }
+      return res.json();
+    }
+
+    async function loadAdminUsers() {
+      const res = await fetch(`${API_BASE}/auth/users`);
+      if (!res.ok) {
+        return;
+      }
+
+      const payload = await res.json();
+      const list = document.getElementById('adminUsers');
+      list.innerHTML = '';
+      payload.users.forEach((user) => {
+        const item = document.createElement('li');
+        item.textContent = `${user.displayName} (${user.username}) — ${user.role} — [${user.sections.join(', ')}]`;
+        list.appendChild(item);
+      });
+    }
 
     async function loadCharts() {
       try {
+        const config = await loadAccessConfig();
+        document.getElementById('welcome').textContent = `Welcome, ${config.user.displayName} (${config.user.role})`;
+
+        const permissionPills = document.getElementById('permissionPills');
+        permissionPills.innerHTML = '';
+        config.user.sections.forEach((section) => {
+          const pill = document.createElement('span');
+          pill.className = 'pill';
+          pill.textContent = section;
+          permissionPills.appendChild(pill);
+        });
+
+        show('performanceSection', config.sections.performance);
+        show('behavioralSection', config.sections.behavioral);
+        show('adminSection', config.sections.admin);
+        show('eventsGridWrap', config.sections.performance || config.sections.behavioral);
+        show('chartsWrap', config.sections.performance);
+
+        if (config.sections.admin) {
+          loadAdminUsers();
+        }
+
+        if (!config.sections.performance) {
+          return;
+        }
+
         const [eventsRes, summaryRes] = await Promise.all([
           fetch(`${API_BASE}/events?limit=500`),
           fetch(`${API_BASE}/stats/summary`)

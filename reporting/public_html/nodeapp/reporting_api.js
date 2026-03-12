@@ -4,13 +4,16 @@ const Database = require('better-sqlite3');
 const session = require('express-session');
 const authRoutes = require('./routes/authRoutes');
 const pageRoutes = require('./routes/pageRoutes');
+const { DB_FILE, initializeAuthDb } = require('./lib/authDb');
+const { requireAuth, requireSection } = require('./middleware/auth');
+const { SECTIONS } = require('./lib/authDb');
 
 const app = express();
 const PORT = 3006;
 
-const DB_FILE = path.join(__dirname, '../../..', 'collector.jk135.site/public_html/nodeapp/analytics.db');
 const db = new Database(DB_FILE, { readonly: false });
 console.log('Connected to SQLite database:', DB_FILE);
+initializeAuthDb(db);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -31,7 +34,7 @@ app.use((req, res, next) => {
 });
 
 // GET /api/events - Retrieve all events
-app.get('/api/events', (req, res) => {
+app.get('/api/events', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 100;
     const offset = parseInt(req.query.offset) || 0;
@@ -47,7 +50,7 @@ app.get('/api/events', (req, res) => {
 });
 
 // GET /api/events/:id - Retrieve a specific event
-app.get('/api/events/:id', (req, res) => {
+app.get('/api/events/:id', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const row = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
     if (!row) {
@@ -60,7 +63,7 @@ app.get('/api/events/:id', (req, res) => {
 });
 
 // POST /api/events - Add a new event
-app.post('/api/events', (req, res) => {
+app.post('/api/events', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const { event_type, url, title, session_id, user_agent } = req.body;
     if (!event_type || !url) {
@@ -78,7 +81,7 @@ app.post('/api/events', (req, res) => {
 });
 
 // PUT /api/events/:id - Update a specific event
-app.put('/api/events/:id', (req, res) => {
+app.put('/api/events/:id', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const { event_type, url, title } = req.body;
     const existing = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
@@ -103,7 +106,7 @@ app.put('/api/events/:id', (req, res) => {
 });
 
 // DELETE /api/events/:id - Delete a specific event
-app.delete('/api/events/:id', (req, res) => {
+app.delete('/api/events/:id', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const existing = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
     if (!existing) {
@@ -117,7 +120,7 @@ app.delete('/api/events/:id', (req, res) => {
 });
 
 // GET /api/sessions - Retrieve all unique sessions
-app.get('/api/sessions', (req, res) => {
+app.get('/api/sessions', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const rows = db.prepare(`
       SELECT 
@@ -138,7 +141,7 @@ app.get('/api/sessions', (req, res) => {
 });
 
 // GET /api/sessions/:id - Retrieve events for a specific session
-app.get('/api/sessions/:id', (req, res) => {
+app.get('/api/sessions/:id', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const rows = db.prepare(`
       SELECT * FROM events 
@@ -155,7 +158,7 @@ app.get('/api/sessions/:id', (req, res) => {
 });
 
 // DELETE /api/sessions/:id - Delete all events for a session
-app.delete('/api/sessions/:id', (req, res) => {
+app.delete('/api/sessions/:id', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const result = db.prepare('DELETE FROM events WHERE session_id = ?').run(req.params.id);
     if (result.changes === 0) {
@@ -169,7 +172,7 @@ app.delete('/api/sessions/:id', (req, res) => {
 
 
 // GET /api/stats/summary - Get overall statistics
-app.get('/api/stats/summary', (req, res) => {
+app.get('/api/stats/summary', requireAuth, requireSection(SECTIONS.PERFORMANCE), (req, res) => {
   try {
     const stats = {
       total_events: db.prepare('SELECT COUNT(*) as count FROM events').get().count,

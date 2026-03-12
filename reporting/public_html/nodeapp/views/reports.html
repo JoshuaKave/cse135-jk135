@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reports</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; background: #f8fafc; color: #1d2939; }
+    .card { background: white; border: 1px solid #d0d5dd; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+    .muted { color: #667085; }
+    .section-tag { display: inline-block; margin-right: 8px; padding: 4px 8px; border-radius: 999px; background: #ecfdf3; color: #027a48; font-size: 12px; }
+  </style>
 </head>
 <body>
   <h1>Reports</h1>
@@ -12,6 +18,39 @@
     <a href="/reports">Reports</a> |
     <a href="/logout">Logout</a>
   </nav>
-  <p>This is another protected inner page.</p>
+  <p class="muted">Viewers only see static saved reports. Analysts and admins see reports that match their allowed sections.</p>
+  <div id="reportList"></div>
+
+  <script>
+    async function loadReports() {
+      const res = await fetch('/api/reports');
+      if (!res.ok) {
+        document.getElementById('reportList').innerHTML = '<p>Unable to load reports.</p>';
+        return;
+      }
+
+      const payload = await res.json();
+      const reportList = document.getElementById('reportList');
+      reportList.innerHTML = '';
+
+      if (!payload.reports.length) {
+        reportList.innerHTML = '<p>No reports available for your access level yet.</p>';
+        return;
+      }
+
+      payload.reports.forEach((report) => {
+        const wrap = document.createElement('section');
+        wrap.className = 'card';
+        wrap.innerHTML = `
+          <h2>${report.name}</h2>
+          <p class="muted">${report.description || 'No description provided.'}</p>
+          <div>${report.sections.map((section) => `<span class="section-tag">${section}</span>`).join('')}</div>
+        `;
+        reportList.appendChild(wrap);
+      });
+    }
+
+    loadReports();
+  </script>
 </body>
 </html>
