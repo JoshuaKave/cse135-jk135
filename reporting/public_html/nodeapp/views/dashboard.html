@@ -3,199 +3,283 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard</title>
+  <title>Dashboard — Analytics Reporting</title>
   <link rel="stylesheet" href="/styles.css" />
-  <script src="https://cdn.zinggrid.com/zinggrid.min.js"></script>
-  <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
+  <script src="https://cdn.zingchart.com/zingchart.min.js" defer></script>
+  <script src="https://cdn.zinggrid.com/zinggrid.min.js" defer></script>
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to content</a>
   <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
 
-  <header class="site-header">
+  <header class="site-header" role="banner">
     <div class="header-inner">
       <h1>Analytics Reporting</h1>
-      <nav>
-        <a href="/dashboard" class="active">Dashboard</a>
+      <nav aria-label="Main navigation">
+        <a href="/dashboard" class="active" aria-current="page">Dashboard</a>
         <a href="/reports">Reports</a>
         <a href="/logout">Logout</a>
       </nav>
     </div>
   </header>
 
-  <div class="container">
-    <div class="card">
-      <h2 id="welcome">Loading access profile...</h2>
-      <p class="muted">This page adapts to role-based and section-level access.</p>
+  <div class="page-title-bar">
+    <div class="title-inner">
+      <div>
+        <h2 id="welcome">Loading...</h2>
+        <p class="subtitle" id="accessInfo"></p>
+      </div>
       <div id="permissionPills"></div>
     </div>
-
-    <div class="grid">
-      <section id="performanceSection" class="card hidden">
-        <h2>Performance</h2>
-        <p class="muted">Event table, summary stats, and performance charting.</p>
-      </section>
-      <section id="behavioralSection" class="card hidden">
-        <h2>Behavioral</h2>
-        <p class="muted">Session-level behavioral exploration.</p>
-      </section>
-      <section id="adminSection" class="card hidden">
-        <h2>Admin</h2>
-        <p class="muted">User management visibility for super admins.</p>
-        <ul id="adminUsers"></ul>
-      </section>
-    </div>
-
-    <div id="eventsGridWrap" class="hidden">
-      <zing-grid
-        editor
-        controls
-        pager
-        page-size="10"
-        sort
-        filter
-        search
-        layout="row"
-        caption="Events"
-        src="/api/events">
-      </zing-grid>
-    </div>
-
-    <section id="chartsWrap" class="hidden">
-      <h2>Event Volume Over Time</h2>
-      <div id="eventVolumeChart" class="chart-container"></div>
-
-      <h2>Event Type Breakdown</h2>
-      <div id="eventTypeChart" class="chart-container"></div>
-    </section>
   </div>
 
+  <main id="main-content" class="container">
+
+    <!-- KPI Row -->
+    <div class="kpi-grid" id="kpiRow" role="region" aria-label="Key metrics">
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+    </div>
+
+    <!-- Charts Row -->
+    <section id="chartsWrap" class="hidden" aria-label="Data visualizations">
+      <div class="grid-2">
+        <article class="card">
+          <h3>Traffic Over Time</h3>
+          <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Hourly event volume — identifies peak usage and traffic patterns</p>
+          <div id="trafficChart" class="chart-container"></div>
+        </article>
+        <article class="card">
+          <h3>Event Composition</h3>
+          <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Distribution of event types across all collected data</p>
+          <div id="eventTypeChart" class="chart-container"></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Recent Events Table (ZingGrid) -->
+    <section id="eventsWrap" class="hidden" aria-label="Recent events">
+      <article class="card">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="mb-0">Recent Events</h3>
+          <span class="muted" style="font-size:0.75rem;" id="eventCount"></span>
+        </div>
+        <zing-grid id="eventsGrid"
+          layout="row"
+          pager
+          page-size="10"
+          sort
+          search
+          no-data="No events loaded yet"
+          aria-label="Recent analytics events">
+          <zg-colgroup>
+            <zg-column index="event_type" header="Type"></zg-column>
+            <zg-column index="url" header="URL"></zg-column>
+            <zg-column index="session_id" header="Session"></zg-column>
+            <zg-column index="server_timestamp" header="Timestamp"></zg-column>
+          </zg-colgroup>
+        </zing-grid>
+      </article>
+    </section>
+
+    <!-- Admin Section -->
+    <section id="adminSection" class="hidden" aria-label="User management">
+      <article class="card">
+        <h3>User Management</h3>
+        <ul id="adminUsers" class="user-list" role="list"></ul>
+      </article>
+    </section>
+
+  </main>
+
   <script>
-    const API_BASE = '/api';
+    const API = '/api';
+    const OCEAN_THEME = {
+      palette: ['#2c5f7c', '#3a8a9e', '#88b7c4', '#c9553d', '#e8735c', '#b8d8e2', '#0f2b38'],
+      graph: {
+        backgroundColor: 'transparent',
+        borderWidth: 0,
+        plotarea: { margin: '48 24 56 56' }
+      },
+      title: { fontFamily: 'system-ui', fontSize: '13px', fontWeight: '700', fontColor: '#0f2b38', textAlign: 'left', paddingLeft: '4px' },
+      tooltip: {
+        backgroundColor: '#0f2b38',
+        fontColor: '#fff',
+        fontSize: '12px',
+        fontFamily: 'system-ui',
+        borderRadius: '6px',
+        padding: '8px 12px',
+        shadow: false
+      },
+      scaleX: { lineColor: 'rgba(136,183,196,0.3)', tick: { lineColor: 'rgba(136,183,196,0.3)' }, item: { fontColor: '#4a5568', fontSize: '10px' }, guide: { visible: false } },
+      scaleY: { lineColor: 'transparent', tick: { visible: false }, item: { fontColor: '#94a3b8', fontSize: '10px' }, guide: { lineColor: 'rgba(136,183,196,0.12)', lineStyle: 'solid' } },
+      legend: { layout: 'float', backgroundColor: 'transparent', borderWidth: 0, item: { fontColor: '#4a5568', fontSize: '11px' }, marker: { borderRadius: '3px' } },
+      plot: { animation: { effect: 'ANIMATION_EXPAND_BOTTOM', method: 'ANIMATION_BACK_EASE_OUT', sequence: 'ANIMATION_BY_PLOT', speed: 600 } }
+    };
 
     function show(id, shouldShow) {
       document.getElementById(id).classList.toggle('hidden', !shouldShow);
     }
 
-    async function loadAccessConfig() {
-      const res = await fetch(`${API_BASE}/dashboard/config`);
-      if (!res.ok) throw new Error('Failed to load dashboard config');
-      return res.json();
+    function buildKPI(label, value, unit, variant) {
+      return `<div class="kpi-card${variant ? ' kpi-' + variant : ''}">
+        <div class="kpi-label">${label}</div>
+        <div class="kpi-value">${value}<span class="kpi-unit">${unit || ''}</span></div>
+      </div>`;
     }
 
-    async function loadAdminUsers() {
-      const res = await fetch(`${API_BASE}/auth/users`);
-      if (!res.ok) return;
-
-      const payload = await res.json();
-      const list = document.getElementById('adminUsers');
-      list.innerHTML = '';
-      payload.users.forEach((user) => {
-        const item = document.createElement('li');
-        item.textContent = `${user.displayName} (${user.username}) — ${user.role} — [${user.sections.join(', ')}]`;
-
-        if (user.role !== 'super_admin') {
-          const delBtn = document.createElement('button');
-          delBtn.className = 'btn-sm btn-danger';
-          delBtn.textContent = 'Delete';
-          delBtn.style.marginLeft = '0.5rem';
-          delBtn.onclick = async () => {
-            if (!confirm(`Delete user "${user.username}"?`)) return;
-            const r = await fetch(`${API_BASE}/auth/users/${user.id}`, { method: 'DELETE' });
-            if (r.ok) loadAdminUsers();
-          };
-          item.appendChild(delBtn);
-        }
-
-        list.appendChild(item);
-      });
-    }
-
-    async function loadCharts() {
+    async function loadDashboard() {
       try {
-        const config = await loadAccessConfig();
-        document.getElementById('welcome').textContent = `Welcome, ${config.user.displayName} (${config.user.role})`;
+        const config = (await (await fetch(`${API}/dashboard/config`)).json());
+        document.getElementById('welcome').textContent = `Welcome back, ${config.user.displayName}`;
+        document.getElementById('accessInfo').textContent = `Signed in as ${config.user.role.replace('_', ' ')}`;
 
-        const permissionPills = document.getElementById('permissionPills');
-        permissionPills.innerHTML = '';
-        config.user.sections.forEach((section) => {
-          const pill = document.createElement('span');
-          pill.className = 'pill';
-          pill.textContent = section;
-          permissionPills.appendChild(pill);
-        });
+        const pills = document.getElementById('permissionPills');
+        pills.innerHTML = config.user.sections.map(s => `<span class="pill">${s}</span>`).join('');
 
-        show('performanceSection', config.sections.performance);
-        show('behavioralSection', config.sections.behavioral);
+        const hasPerf = config.sections.performance;
+        const hasBehav = config.sections.behavioral;
+
+        show('chartsWrap', hasPerf);
+        show('eventsWrap', hasPerf || hasBehav);
         show('adminSection', config.sections.admin);
-        show('eventsGridWrap', config.sections.performance || config.sections.behavioral);
-        show('chartsWrap', config.sections.performance);
 
         if (config.sections.admin) loadAdminUsers();
 
-        if (!config.sections.performance) return;
+        const [summaryRes, eventsRes] = await Promise.all([
+          hasPerf ? fetch(`${API}/stats/summary`) : null,
+          (hasPerf || hasBehav) ? fetch(`${API}/events?limit=25`) : null
+        ].filter(Boolean));
 
-        const [eventsRes, summaryRes] = await Promise.all([
-          fetch(`${API_BASE}/events?limit=500`),
-          fetch(`${API_BASE}/stats/summary`)
-        ]);
+        const summary = hasPerf ? await summaryRes.json() : null;
+        const events = (hasPerf || hasBehav) ? await eventsRes.json() : [];
 
-        const events = await eventsRes.json();
-        const summary = await summaryRes.json();
+        // KPI cards
+        const kpiRow = document.getElementById('kpiRow');
+        if (summary) {
+          kpiRow.innerHTML = [
+            buildKPI('Total Events', (summary.total_events || 0).toLocaleString(), '', 'teal'),
+            buildKPI('Unique Sessions', (summary.unique_sessions || 0).toLocaleString(), ''),
+            buildKPI('Event Types', (summary.event_types || []).length, 'types'),
+            buildKPI('Error Rate',
+              summary.event_types
+                ? ((summary.event_types.find(t => t.event_type === 'error')?.count || 0) / Math.max(summary.total_events, 1) * 100).toFixed(1)
+                : '0',
+              '%', 'coral')
+          ].join('');
+        } else {
+          kpiRow.innerHTML = '';
+        }
 
-        // Event volume over time (group by minute)
-        const minuteBuckets = {};
-        events.forEach((e) => {
-          const ts = e.server_timestamp || e.client_timestamp;
-          if (!ts) return;
-          const d = new Date(ts);
-          if (isNaN(d.getTime())) return;
-          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} `
-            + `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-          minuteBuckets[key] = (minuteBuckets[key] || 0) + 1;
-        });
+        // Traffic chart (hourly bucketed from summary recent events isn't great — use events)
+        if (hasPerf && summary) {
+          const perfData = await (await fetch(`${API}/stats/performance`)).json();
 
-        const sortedTimes = Object.keys(minuteBuckets).sort();
-        const volumeValues = sortedTimes.map((k) => minuteBuckets[k]);
+          if (perfData.volumeByHour.length > 0) {
+            const labels = perfData.volumeByHour.map(r => {
+              const parts = r.hour_bucket.split(' ');
+              return parts[1] || r.hour_bucket;
+            });
 
-        zingchart.render({
-          id: 'eventVolumeChart',
-          data: {
-            type: 'line',
-            title: { text: 'Events per Minute' },
-            scaleX: { label: { text: 'Time (minute)' }, labels: sortedTimes },
-            scaleY: { label: { text: 'Event Count' } },
-            series: [{ values: volumeValues }]
-          },
-          height: 360,
-          width: '100%'
-        });
+            zingchart.render({
+              id: 'trafficChart',
+              data: {
+                ...OCEAN_THEME.graph,
+                type: 'area',
+                scaleX: { ...OCEAN_THEME.scaleX, labels, label: { text: '' } },
+                scaleY: { ...OCEAN_THEME.scaleY, label: { text: '' } },
+                title: { ...OCEAN_THEME.title, text: '' },
+                tooltip: OCEAN_THEME.tooltip,
+                plot: {
+                  ...OCEAN_THEME.plot,
+                  aspect: 'spline',
+                  lineWidth: '2px',
+                  marker: { visible: false },
+                  alphaArea: 0.15
+                },
+                series: [{
+                  values: perfData.volumeByHour.map(r => r.count),
+                  lineColor: '#2c5f7c',
+                  backgroundColor: '#2c5f7c'
+                }]
+              },
+              height: 340, width: '100%'
+            });
+          }
 
-        // Event type breakdown
-        const typeSeries = (summary.event_types || []).map((row) => ({
-          text: row.event_type || 'unknown',
-          values: [row.count || 0]
-        }));
+          // Event type chart — horizontal bar instead of pie for readability
+          const types = (summary.event_types || []).sort((a, b) => b.count - a.count);
+          if (types.length > 0) {
+            zingchart.render({
+              id: 'eventTypeChart',
+              data: {
+                ...OCEAN_THEME.graph,
+                type: 'hbar',
+                scaleX: { ...OCEAN_THEME.scaleX, labels: types.map(t => t.event_type || 'unknown') },
+                scaleY: { ...OCEAN_THEME.scaleY, label: { text: '' } },
+                title: { ...OCEAN_THEME.title, text: '' },
+                tooltip: { ...OCEAN_THEME.tooltip, text: '%data-type: %v events' },
+                plot: {
+                  ...OCEAN_THEME.plot,
+                  barWidth: '60%',
+                  borderRadius: '3px',
+                  valueBox: { text: '%v', placement: 'out', fontColor: '#4a5568', fontSize: '10px' }
+                },
+                series: [{
+                  values: types.map(t => t.count),
+                  backgroundColor: '#3a8a9e',
+                  'data-type': types.map(t => t.event_type)
+                }]
+              },
+              height: 340, width: '100%'
+            });
+          }
+        }
 
-        zingchart.render({
-          id: 'eventTypeChart',
-          data: {
-            type: 'pie',
-            title: { text: 'Event Type Breakdown' },
-            plot: {
-              valueBox: { placement: 'out', text: '%t: %v (%npv%)', fontSize: 12 },
-              tooltip: { text: '%t\nCount: %v\nPercent: %npv%' }
-            },
-            series: typeSeries
-          },
-          height: 360,
-          width: '100%'
-        });
+        // Recent events — populate ZingGrid
+        if (events.length > 0) {
+          document.getElementById('eventCount').textContent = `Showing latest ${events.length}`;
+          const gridData = events.map(e => ({
+            event_type: e.event_type || 'unknown',
+            url: e.url || '',
+            session_id: e.session_id ? e.session_id.substring(0, 10) : '—',
+            server_timestamp: e.server_timestamp || ''
+          }));
+          const grid = document.getElementById('eventsGrid');
+          grid.setData(gridData);
+        }
+
       } catch (err) {
-        console.error('Failed to load chart data:', err);
+        console.error('Dashboard load failed:', err);
+        document.getElementById('kpiRow').innerHTML = '<p class="muted">Failed to load dashboard data.</p>';
       }
     }
 
-    loadCharts();
+    async function loadAdminUsers() {
+      const res = await fetch(`${API}/auth/users`);
+      if (!res.ok) return;
+      const { users } = await res.json();
+      const list = document.getElementById('adminUsers');
+      list.innerHTML = users.map(u => `
+        <li class="user-item">
+          <div class="user-info">
+            <span class="user-name">${u.displayName} <span class="muted" style="font-weight:400;">@${u.username}</span></span>
+            <span class="user-meta">${u.role.replace('_', ' ')} · ${(u.sections || []).join(', ')}</span>
+          </div>
+          ${u.role !== 'super_admin' ? `<button class="btn-sm btn-danger" onclick="deleteUser(${u.id}, '${u.username}')">Remove</button>` : ''}
+        </li>
+      `).join('');
+    }
+
+    async function deleteUser(id, name) {
+      if (!confirm('Remove user "' + name + '"?')) return;
+      const r = await fetch(`${API}/auth/users/${id}`, { method: 'DELETE' });
+      if (r.ok) loadAdminUsers();
+    }
+
+    loadDashboard();
   </script>
 </body>
 </html>

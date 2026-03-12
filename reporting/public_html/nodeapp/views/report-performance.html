@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Performance Report</title>
+  <title>Performance Report — Analytics Reporting</title>
   <link rel="stylesheet" href="/styles.css" />
-  <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
+  <script src="https://cdn.zingchart.com/zingchart.min.js" defer></script>
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to content</a>
   <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
 
-  <header class="site-header">
+  <header class="site-header" role="banner">
     <div class="header-inner">
       <h1>Analytics Reporting</h1>
-      <nav>
+      <nav aria-label="Main navigation">
         <a href="/dashboard">Dashboard</a>
         <a href="/reports" class="active">Reports</a>
         <a href="/logout">Logout</a>
@@ -21,48 +22,99 @@
     </div>
   </header>
 
-  <div class="container">
-    <div class="export-bar">
-      <a href="/api/export/performance-snapshot" class="btn">Export PDF</a>
+  <div class="page-title-bar">
+    <div class="title-inner">
+      <div>
+        <h2>Performance Snapshot</h2>
+        <p class="subtitle">Core Web Vitals, timing metrics, and per-page performance breakdown</p>
+      </div>
+      <div class="export-bar">
+        <a href="/reports" class="btn btn-outline btn-sm">&larr; All Reports</a>
+        <a href="/api/export/performance-snapshot" class="btn btn-sm">Export PDF</a>
+      </div>
+    </div>
+  </div>
+
+  <main id="main-content" class="container">
+
+    <!-- KPI Row -->
+    <div class="kpi-grid" id="vitalsKPIs" role="region" aria-label="Web Vitals summary">
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:88px;"></div>
     </div>
 
-    <h2>Performance Snapshot</h2>
-    <p class="muted">Core Web Vitals, timing metrics, and per-page performance breakdown.</p>
+    <!-- Charts -->
+    <div class="grid-2">
+      <article class="card">
+        <h3><span class="card-icon" aria-hidden="true">&#x23F1;</span> Timing Metrics (ms)</h3>
+        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">TTFB, LCP, and INP — lower is better. Measures server response, visual load, and interactivity.</p>
+        <div id="timingChart" class="chart-container"></div>
+      </article>
+      <article class="card">
+        <h3><span class="card-icon" aria-hidden="true">&#x1F4C8;</span> Traffic Volume by Hour</h3>
+        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Event volume over time — reveals peak hours and usage trends</p>
+        <div id="volumeChart" class="chart-container"></div>
+      </article>
+    </div>
 
-    <div class="grid" id="vitalsCards"></div>
+    <!-- Per-Page Performance -->
+    <article class="card">
+      <h3><span class="card-icon" aria-hidden="true">&#x1F310;</span> Performance by Page</h3>
+      <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Compare load performance across pages — identify which pages need optimization</p>
+      <div id="pageCompareChart" class="chart-container"></div>
+    </article>
 
-    <section class="card">
-      <h2>Event Volume by Hour</h2>
-      <div id="volumeChart" class="chart-container"></div>
-    </section>
+    <!-- Data Table -->
+    <article class="card">
+      <h3><span class="card-icon" aria-hidden="true">&#x1F4CB;</span> Detailed Page Metrics</h3>
+      <div class="table-wrap">
+        <table id="pageTable" aria-label="Per-page performance metrics">
+          <thead>
+            <tr>
+              <th scope="col">Page URL</th>
+              <th scope="col">Hits</th>
+              <th scope="col">Avg TTFB</th>
+              <th scope="col">Avg LCP</th>
+              <th scope="col">Avg CLS</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </article>
 
-    <section class="card">
-      <h2>Web Vitals Averages</h2>
-      <div id="vitalsChart" class="chart-container"></div>
-    </section>
-
-    <section class="card">
-      <h2>Performance by Page</h2>
-      <table id="pageTable">
-        <thead>
-          <tr><th>URL</th><th>Hits</th><th>Avg TTFB (ms)</th><th>Avg LCP (ms)</th><th>Avg CLS</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <section class="card comments-section">
-      <h2>Analyst Comments</h2>
+    <!-- Analyst Comments -->
+    <article class="card comments-section" aria-label="Analyst comments">
+      <h3><span class="card-icon" aria-hidden="true">&#x1F4AC;</span> Analyst Comments</h3>
       <div id="commentsList"></div>
       <div id="commentForm" class="mt-1">
-        <textarea id="commentText" placeholder="Add your analysis or observations..."></textarea>
-        <button onclick="postComment()">Add Comment</button>
+        <label for="commentText" class="sr-only">Add a comment</label>
+        <textarea id="commentText" placeholder="Share your analysis or observations about this data..."></textarea>
+        <button onclick="postComment()" style="margin-top:0.5rem;">Post Comment</button>
       </div>
-    </section>
-  </div>
+    </article>
+
+  </main>
 
   <script>
     const SLUG = 'performance-snapshot';
+    const T = {
+      g: { backgroundColor: 'transparent', borderWidth: 0, plotarea: { margin: '40 24 56 56' } },
+      tt: { backgroundColor: '#0f2b38', fontColor: '#fff', fontSize: '12px', fontFamily: 'system-ui', borderRadius: '6px', padding: '8px 12px', shadow: false },
+      sx: { lineColor: 'rgba(136,183,196,0.3)', tick: { lineColor: 'rgba(136,183,196,0.3)' }, item: { fontColor: '#4a5568', fontSize: '10px' }, guide: { visible: false } },
+      sy: { lineColor: 'transparent', tick: { visible: false }, item: { fontColor: '#94a3b8', fontSize: '10px' }, guide: { lineColor: 'rgba(136,183,196,0.12)' } },
+      anim: { animation: { effect: 'ANIMATION_EXPAND_BOTTOM', method: 'ANIMATION_BACK_EASE_OUT', speed: 500 } }
+    };
+
+    function kpi(label, value, unit, variant) {
+      const display = value != null ? value : '—';
+      return '<div class="kpi-card' + (variant ? ' kpi-' + variant : '') + '">' +
+        '<div class="kpi-label">' + label + '</div>' +
+        '<div class="kpi-value">' + display + '<span class="kpi-unit">' + unit + '</span></div></div>';
+    }
 
     async function load() {
       try {
@@ -73,101 +125,104 @@
         const data = await perfRes.json();
         const config = await configRes.json();
 
-        // Hide comment form for viewers
-        if (config.user.role === 'viewer') {
-          document.getElementById('commentForm').classList.add('hidden');
-        }
+        if (config.user.role === 'viewer') document.getElementById('commentForm').classList.add('hidden');
 
-        // Vitals summary cards
-        const v = data.vitals;
-        const cards = document.getElementById('vitalsCards');
-        const metrics = [
-          { label: 'Avg TTFB', value: v.avg_ttfb ? v.avg_ttfb + ' ms' : 'N/A' },
-          { label: 'Avg LCP', value: v.avg_lcp ? v.avg_lcp + ' ms' : 'N/A' },
-          { label: 'Avg CLS', value: v.avg_cls ?? 'N/A' },
-          { label: 'Avg INP', value: v.avg_inp ? v.avg_inp + ' ms' : 'N/A' },
-          { label: 'Samples', value: v.sample_count }
-        ];
-        cards.innerHTML = metrics.map((m) => `
-          <div class="card" style="text-align:center;">
-            <div class="muted" style="font-size:0.8rem;">${m.label}</div>
-            <div style="font-size:1.5rem; font-weight:700;">${m.value}</div>
-          </div>
-        `).join('');
+        var v = data.vitals;
 
-        // Volume by hour chart
+        document.getElementById('vitalsKPIs').innerHTML = [
+          kpi('TTFB', v.avg_ttfb, 'ms', 'teal'),
+          kpi('LCP', v.avg_lcp, 'ms'),
+          kpi('CLS', v.avg_cls, '', 'coral'),
+          kpi('INP', v.avg_inp, 'ms'),
+          kpi('Samples', v.sample_count, '')
+        ].join('');
+
+        // Timing chart — ONLY ms-based metrics on same axis (CLS excluded: different unit)
+        zingchart.render({
+          id: 'timingChart',
+          data: {
+            ...T.g, type: 'bar',
+            scaleX: { ...T.sx, labels: ['TTFB', 'LCP', 'INP'] },
+            scaleY: { ...T.sy, label: { text: 'Milliseconds', fontColor: '#94a3b8', fontSize: '10px' } },
+            tooltip: { ...T.tt, text: '%t: %v ms' },
+            plot: { ...T.anim, barWidth: '55%', borderRadius: '4px' },
+            series: [
+              { values: [v.avg_ttfb || 0], text: 'TTFB', backgroundColor: '#2c5f7c' },
+              { values: [v.avg_lcp || 0], text: 'LCP', backgroundColor: '#3a8a9e' },
+              { values: [v.avg_inp || 0], text: 'INP', backgroundColor: '#88b7c4' }
+            ]
+          },
+          height: 340, width: '100%'
+        });
+
+        // Volume by hour
         if (data.volumeByHour.length > 0) {
           zingchart.render({
             id: 'volumeChart',
             data: {
-              type: 'bar',
-              title: { text: 'Events per Hour' },
-              scaleX: { labels: data.volumeByHour.map((r) => r.hour_bucket), label: { text: 'Hour' } },
-              scaleY: { label: { text: 'Count' } },
-              series: [{ values: data.volumeByHour.map((r) => r.count), backgroundColor: '#2c5f7c' }]
+              ...T.g, type: 'area',
+              scaleX: { ...T.sx, labels: data.volumeByHour.map(function(r) { var p = r.hour_bucket.split(' '); return p[1] || r.hour_bucket; }) },
+              scaleY: T.sy,
+              tooltip: T.tt,
+              plot: { ...T.anim, aspect: 'spline', lineWidth: '2px', marker: { visible: false }, alphaArea: 0.15 },
+              series: [{ values: data.volumeByHour.map(function(r) { return r.count; }), lineColor: '#3a8a9e', backgroundColor: '#3a8a9e' }]
             },
-            height: 360, width: '100%'
+            height: 340, width: '100%'
           });
         }
 
-        // Vitals bar chart
-        const vitalsLabels = ['TTFB', 'LCP', 'CLS (x1000)', 'INP'];
-        const vitalsValues = [v.avg_ttfb || 0, v.avg_lcp || 0, (v.avg_cls || 0) * 1000, v.avg_inp || 0];
-        zingchart.render({
-          id: 'vitalsChart',
-          data: {
-            type: 'bar',
-            title: { text: 'Average Web Vitals' },
-            scaleX: { labels: vitalsLabels },
-            scaleY: { label: { text: 'Value (ms / score)' } },
-            series: [{ values: vitalsValues, backgroundColor: '#88b7c4' }]
-          },
-          height: 360, width: '100%'
-        });
+        // Per-page comparison
+        if (data.byPage.length > 0) {
+          var pages = data.byPage.slice(0, 8);
+          var labels = pages.map(function(p) { try { return new URL(p.url).pathname; } catch(e) { return p.url; } });
+          zingchart.render({
+            id: 'pageCompareChart',
+            data: {
+              ...T.g, type: 'bar',
+              scaleX: { ...T.sx, labels: labels, item: { fontColor: '#4a5568', fontSize: '10px', maxChars: 20 } },
+              scaleY: { ...T.sy, label: { text: 'ms', fontColor: '#94a3b8', fontSize: '10px' } },
+              tooltip: { ...T.tt, text: '%t: %v ms' },
+              legend: { layout: 'float', backgroundColor: 'transparent', borderWidth: 0, item: { fontColor: '#4a5568', fontSize: '10px' }, marker: { borderRadius: '3px' } },
+              plot: { ...T.anim, barWidth: '70%', borderRadius: '3px' },
+              series: [
+                { values: pages.map(function(p) { return p.avg_ttfb || 0; }), text: 'TTFB', backgroundColor: '#2c5f7c' },
+                { values: pages.map(function(p) { return p.avg_lcp || 0; }), text: 'LCP', backgroundColor: '#3a8a9e' }
+              ]
+            },
+            height: 340, width: '100%'
+          });
+        }
 
-        // Page table
-        const tbody = document.querySelector('#pageTable tbody');
-        tbody.innerHTML = data.byPage.map((p) => `
-          <tr>
-            <td>${p.url}</td>
-            <td>${p.hits}</td>
-            <td>${p.avg_ttfb ?? 'N/A'}</td>
-            <td>${p.avg_lcp ?? 'N/A'}</td>
-            <td>${p.avg_cls ?? 'N/A'}</td>
-          </tr>
-        `).join('');
+        // Data table
+        document.querySelector('#pageTable tbody').innerHTML = data.byPage.map(function(p) {
+          return '<tr><td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + p.url + '</td>' +
+            '<td>' + p.hits + '</td>' +
+            '<td>' + (p.avg_ttfb != null ? p.avg_ttfb + ' ms' : '—') + '</td>' +
+            '<td>' + (p.avg_lcp != null ? p.avg_lcp + ' ms' : '—') + '</td>' +
+            '<td>' + (p.avg_cls != null ? p.avg_cls : '—') + '</td></tr>';
+        }).join('');
 
         loadComments();
-      } catch (err) {
-        console.error('Failed to load performance data:', err);
-      }
+      } catch (err) { console.error('Performance load failed:', err); }
     }
 
     async function loadComments() {
-      const res = await fetch(`/api/reports/${SLUG}/comments`);
-      const { comments } = await res.json();
-      const list = document.getElementById('commentsList');
-      if (comments.length === 0) {
-        list.innerHTML = '<p class="muted">No comments yet.</p>';
-        return;
-      }
-      list.innerHTML = comments.map((c) => `
-        <div class="comment">
-          <div class="comment-meta">${c.username} — ${new Date(c.created_at).toLocaleString()}</div>
-          <div>${c.comment_text}</div>
-        </div>
-      `).join('');
+      var res = await fetch('/api/reports/' + SLUG + '/comments');
+      var data = await res.json();
+      var list = document.getElementById('commentsList');
+      list.innerHTML = data.comments.length === 0
+        ? '<p class="muted" style="font-size:0.85rem;">No analyst comments yet.</p>'
+        : data.comments.map(function(c) {
+          return '<div class="comment"><div class="comment-meta">' + c.username + ' &middot; ' + new Date(c.created_at).toLocaleString() + '</div><div class="comment-text">' + c.comment_text + '</div></div>';
+        }).join('');
     }
 
     async function postComment() {
-      const text = document.getElementById('commentText').value.trim();
+      var el = document.getElementById('commentText');
+      var text = el.value.trim();
       if (!text) return;
-      await fetch(`/api/reports/${SLUG}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ comment_text: text })
-      });
-      document.getElementById('commentText').value = '';
+      await fetch('/api/reports/' + SLUG + '/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment_text: text }) });
+      el.value = '';
       loadComments();
     }
 

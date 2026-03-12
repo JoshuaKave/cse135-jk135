@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Behavioral Report</title>
+  <title>Behavioral Report — Analytics Reporting</title>
   <link rel="stylesheet" href="/styles.css" />
-  <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
+  <script src="https://cdn.zingchart.com/zingchart.min.js" defer></script>
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to content</a>
   <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
 
-  <header class="site-header">
+  <header class="site-header" role="banner">
     <div class="header-inner">
       <h1>Analytics Reporting</h1>
-      <nav>
+      <nav aria-label="Main navigation">
         <a href="/dashboard">Dashboard</a>
         <a href="/reports" class="active">Reports</a>
         <a href="/logout">Logout</a>
@@ -21,137 +22,313 @@
     </div>
   </header>
 
-  <div class="container">
-    <div class="export-bar">
-      <a href="/api/export/behavior-performance-overview" class="btn">Export PDF</a>
-    </div>
-
-    <h2>Behavior + Performance Overview</h2>
-    <p class="muted">Session activity, top pages, and user engagement patterns.</p>
-
-    <section class="card">
-      <h2>Event Types by Session Reach</h2>
-      <div id="eventTypesChart" class="chart-container"></div>
-    </section>
-
-    <section class="card">
-      <h2>Top Pages</h2>
-      <table id="pagesTable">
-        <thead>
-          <tr><th>URL</th><th>Pageviews</th><th>Unique Sessions</th><th>Avg Time on Page (s)</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <section class="card">
-      <h2>Sessions</h2>
-      <table id="sessionsTable">
-        <thead>
-          <tr><th>Session ID</th><th>Events</th><th>Event Types</th><th>First Seen</th><th>Last Seen</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <section class="card comments-section">
-      <h2>Analyst Comments</h2>
-      <div id="commentsList"></div>
-      <div id="commentForm" class="mt-1">
-        <textarea id="commentText" placeholder="Add your analysis or observations..."></textarea>
-        <button onclick="postComment()">Add Comment</button>
+  <div class="page-title-bar">
+    <div class="title-inner">
+      <div>
+        <h2>Behavior + Performance Overview</h2>
+        <p class="subtitle">Session activity, audience composition, and engagement patterns</p>
       </div>
-    </section>
+      <div class="export-bar">
+        <a href="/reports" class="btn btn-outline btn-sm">&larr; All Reports</a>
+        <a href="/api/export/behavior-performance-overview" class="btn btn-sm">Export PDF</a>
+      </div>
+    </div>
   </div>
 
+  <main id="main-content" class="container">
+
+    <!-- KPI Row -->
+    <div class="kpi-grid" id="behavKPIs" role="region" aria-label="Behavioral summary">
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+    </div>
+
+    <!-- Event Types + Device Breakdown -->
+    <div class="grid-2">
+      <article class="card">
+        <h3><span class="card-icon" aria-hidden="true">&#x1F4CA;</span> Event Types by Reach</h3>
+        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Compares total event count vs unique session reach — high count with low reach means repeat triggers</p>
+        <div id="eventTypesChart" class="chart-container"></div>
+      </article>
+      <article class="card">
+        <h3><span class="card-icon" aria-hidden="true">&#x1F4F1;</span> Device Breakdown</h3>
+        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Viewport-based device classification — guides responsive design priorities</p>
+        <div id="deviceChart" class="chart-container"></div>
+      </article>
+    </div>
+
+    <!-- Referrer + Color Scheme -->
+    <div class="grid-2">
+      <article class="card">
+        <h3><span class="card-icon" aria-hidden="true">&#x1F517;</span> Traffic Sources</h3>
+        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Where visitors come from — direct visits vs referred traffic</p>
+        <div id="referrerChart" class="chart-container"></div>
+      </article>
+      <article class="card">
+        <h3><span class="card-icon" aria-hidden="true">&#x1F30D;</span> Language Distribution</h3>
+        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Visitor language preferences from browser Accept-Language headers</p>
+        <div id="langChart" class="chart-container"></div>
+      </article>
+    </div>
+
+    <!-- Color Scheme -->
+    <div class="grid-2">
+      <article class="card">
+        <h3><span class="card-icon" aria-hidden="true">&#x1F3A8;</span> Color Scheme Preference</h3>
+        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Light vs dark mode preference — informs theming decisions</p>
+        <div id="schemeChart" class="chart-container"></div>
+      </article>
+      <article class="card">
+        <h3><span class="card-icon" aria-hidden="true">&#x1F4C8;</span> Sessions Over Time</h3>
+        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Session activity timeline — reveals engagement trends and patterns</p>
+        <div id="sessionsTimeChart" class="chart-container"></div>
+      </article>
+    </div>
+
+    <!-- Top Pages -->
+    <article class="card">
+      <h3><span class="card-icon" aria-hidden="true">&#x1F4C4;</span> Top Pages by Engagement</h3>
+      <div class="table-wrap">
+        <table id="pagesTable" aria-label="Top pages by pageviews">
+          <thead>
+            <tr>
+              <th scope="col">Page URL</th>
+              <th scope="col">Pageviews</th>
+              <th scope="col">Unique Sessions</th>
+              <th scope="col">Avg Time on Page</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </article>
+
+    <!-- Sessions Table -->
+    <article class="card">
+      <h3><span class="card-icon" aria-hidden="true">&#x1F464;</span> Session Explorer</h3>
+      <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Individual session data for deep-dive analysis</p>
+      <div class="table-wrap">
+        <table id="sessionsTable" aria-label="Session details">
+          <thead>
+            <tr>
+              <th scope="col">Session ID</th>
+              <th scope="col">Events</th>
+              <th scope="col">Event Types</th>
+              <th scope="col">First Seen</th>
+              <th scope="col">Last Seen</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </article>
+
+    <!-- Analyst Comments -->
+    <article class="card comments-section" aria-label="Analyst comments">
+      <h3><span class="card-icon" aria-hidden="true">&#x1F4AC;</span> Analyst Comments</h3>
+      <div id="commentsList"></div>
+      <div id="commentForm" class="mt-1">
+        <label for="commentText" class="sr-only">Add a comment</label>
+        <textarea id="commentText" placeholder="Share your analysis or observations about this data..."></textarea>
+        <button onclick="postComment()" style="margin-top:0.5rem;">Post Comment</button>
+      </div>
+    </article>
+
+  </main>
+
   <script>
-    const SLUG = 'behavior-performance-overview';
+    var SLUG = 'behavior-performance-overview';
+    var T = {
+      g: { backgroundColor: 'transparent', borderWidth: 0, plotarea: { margin: '40 24 56 56' } },
+      tt: { backgroundColor: '#0f2b38', fontColor: '#fff', fontSize: '12px', fontFamily: 'system-ui', borderRadius: '6px', padding: '8px 12px', shadow: false },
+      sx: { lineColor: 'rgba(136,183,196,0.3)', tick: { lineColor: 'rgba(136,183,196,0.3)' }, item: { fontColor: '#4a5568', fontSize: '10px' }, guide: { visible: false } },
+      sy: { lineColor: 'transparent', tick: { visible: false }, item: { fontColor: '#94a3b8', fontSize: '10px' }, guide: { lineColor: 'rgba(136,183,196,0.12)' } },
+      anim: { animation: { effect: 'ANIMATION_EXPAND_BOTTOM', method: 'ANIMATION_BACK_EASE_OUT', speed: 500 } }
+    };
+
+    function kpi(label, value, unit, variant) {
+      return '<div class="kpi-card' + (variant ? ' kpi-' + variant : '') + '"><div class="kpi-label">' + label + '</div><div class="kpi-value">' + (value != null ? value : '—') + '<span class="kpi-unit">' + (unit || '') + '</span></div></div>';
+    }
+
+    var colors = ['#2c5f7c', '#3a8a9e', '#88b7c4', '#c9553d', '#e8735c', '#b8d8e2', '#0f2b38'];
 
     async function load() {
       try {
-        const [behavRes, configRes] = await Promise.all([
+        var [behavRes, configRes, techRes, refRes] = await Promise.all([
           fetch('/api/stats/behavioral'),
-          fetch('/api/dashboard/config')
+          fetch('/api/dashboard/config'),
+          fetch('/api/stats/technographics'),
+          fetch('/api/stats/referrers')
         ]);
-        const data = await behavRes.json();
-        const config = await configRes.json();
+        var data = await behavRes.json();
+        var config = await configRes.json();
+        var tech = await techRes.json();
+        var refs = await refRes.json();
 
-        if (config.user.role === 'viewer') {
-          document.getElementById('commentForm').classList.add('hidden');
-        }
+        if (config.user.role === 'viewer') document.getElementById('commentForm').classList.add('hidden');
+
+        // KPIs
+        var totalSessions = data.sessions.length;
+        var avgEvents = totalSessions > 0 ? Math.round(data.sessions.reduce(function(s, x) { return s + x.event_count; }, 0) / totalSessions) : 0;
+        var totalPages = data.topPages.length;
+        document.getElementById('behavKPIs').innerHTML = [
+          kpi('Sessions', totalSessions, '', 'teal'),
+          kpi('Avg Events/Session', avgEvents, ''),
+          kpi('Pages Tracked', totalPages, '')
+        ].join('');
 
         // Event types chart
         if (data.eventTypesBySession.length > 0) {
           zingchart.render({
             id: 'eventTypesChart',
             data: {
-              type: 'bar',
-              title: { text: 'Event Types: Total Count vs Session Reach' },
-              scaleX: { labels: data.eventTypesBySession.map((r) => r.event_type) },
-              scaleY: { label: { text: 'Count' } },
+              ...T.g, type: 'bar',
+              scaleX: { ...T.sx, labels: data.eventTypesBySession.map(function(r) { return r.event_type; }) },
+              scaleY: T.sy,
+              tooltip: T.tt,
+              legend: { layout: 'float', backgroundColor: 'transparent', borderWidth: 0, item: { fontColor: '#4a5568', fontSize: '10px' }, marker: { borderRadius: '3px' } },
+              plot: { ...T.anim, barWidth: '60%', borderRadius: '3px' },
               series: [
-                { text: 'Total Events', values: data.eventTypesBySession.map((r) => r.total_count), backgroundColor: '#2c5f7c' },
-                { text: 'Sessions', values: data.eventTypesBySession.map((r) => r.session_count), backgroundColor: '#88b7c4' }
+                { values: data.eventTypesBySession.map(function(r) { return r.total_count; }), text: 'Total Events', backgroundColor: '#2c5f7c' },
+                { values: data.eventTypesBySession.map(function(r) { return r.session_count; }), text: 'Sessions', backgroundColor: '#88b7c4' }
               ]
             },
-            height: 360, width: '100%'
+            height: 340, width: '100%'
           });
         }
 
+        // Device breakdown — pie chart is actually useful here (proportional data with few categories)
+        if (tech.viewportBreakdown.length > 0) {
+          zingchart.render({
+            id: 'deviceChart',
+            data: {
+              ...T.g, type: 'pie',
+              tooltip: { ...T.tt, text: '%t: %v (%npv%)' },
+              plot: {
+                ...T.anim,
+                borderWidth: 0,
+                slice: '55%',
+                valueBox: { placement: 'out', text: '%t\n%npv%', fontSize: '10px', fontColor: '#4a5568' }
+              },
+              series: tech.viewportBreakdown.map(function(d, i) {
+                var colors = ['#2c5f7c', '#3a8a9e', '#88b7c4', '#c9553d'];
+                return { values: [d.count], text: d.device_class, backgroundColor: colors[i % colors.length] };
+              })
+            },
+            height: 340, width: '100%'
+          });
+        }
+
+        // Referrer chart
+        if (refs.referrers.length > 0) {
+          var topRefs = refs.referrers.slice(0, 8);
+          zingchart.render({
+            id: 'referrerChart',
+            data: {
+              ...T.g, type: 'hbar',
+              scaleX: { ...T.sx, labels: topRefs.map(function(r) { try { return r.source.length > 30 ? new URL(r.source).hostname : r.source; } catch(e) { return r.source; } }) },
+              scaleY: T.sy,
+              tooltip: { ...T.tt, text: '%v pageviews' },
+              plot: { ...T.anim, barWidth: '55%', borderRadius: '3px', valueBox: { text: '%v', placement: 'out', fontColor: '#4a5568', fontSize: '10px' } },
+              series: [{ values: topRefs.map(function(r) { return r.count; }), backgroundColor: '#3a8a9e' }]
+            },
+            height: 340, width: '100%'
+          });
+        }
+
+        // Language distribution — horizontal bar chart
+        if (tech.languages.length > 0) {
+          var langs = tech.languages.slice(0, 10);
+          zingchart.render({
+            id: 'langChart',
+            data: {
+              ...T.g, type: 'hbar',
+              scaleX: { ...T.sx, labels: langs.map(function(l) { return l.lang.toUpperCase(); }) },
+              scaleY: T.sy,
+              tooltip: { ...T.tt, text: '%v sessions' },
+              plot: { ...T.anim, barWidth: '55%', borderRadius: '3px', valueBox: { text: '%v', placement: 'out', fontColor: '#4a5568', fontSize: '10px' } },
+              series: [{ values: langs.map(function(l) { return l.count; }), backgroundColor: '#2c5f7c' }]
+            },
+            height: 300, width: '100%'
+          });
+        }
+
+        // Color scheme preference — pie chart (few categories, proportional data)
+        if (tech.colorScheme.length > 0) {
+          zingchart.render({
+            id: 'schemeChart',
+            data: {
+              ...T.g, type: 'pie',
+              tooltip: { ...T.tt, text: '%t: %v (%npv%)' },
+              plot: {
+                ...T.anim,
+                borderWidth: 0,
+                slice: '55%',
+                valueBox: { placement: 'out', text: '%t\n%npv%', fontSize: '10px', fontColor: '#4a5568' }
+              },
+              series: tech.colorScheme.map(function(c, i) {
+                return { values: [c.count], text: c.scheme || 'unknown', backgroundColor: colors[i % colors.length] };
+              })
+            },
+            height: 300, width: '100%'
+          });
+        }
+
+        // Sessions over time — area chart from session first_seen dates
+        if (data.sessions.length > 0) {
+          var dayMap = {};
+          data.sessions.forEach(function(s) {
+            if (s.first_seen) {
+              var day = s.first_seen.substring(0, 10);
+              dayMap[day] = (dayMap[day] || 0) + 1;
+            }
+          });
+          var days = Object.keys(dayMap).sort();
+          if (days.length > 0) {
+            zingchart.render({
+              id: 'sessionsTimeChart',
+              data: {
+                ...T.g, type: 'area',
+                scaleX: { ...T.sx, labels: days.map(function(d) { return d.substring(5); }) },
+                scaleY: T.sy,
+                tooltip: { ...T.tt, text: '%v sessions' },
+                plot: { ...T.anim, aspect: 'spline', lineWidth: '2px', marker: { size: 3, backgroundColor: '#3a8a9e', borderColor: '#3a8a9e' }, alphaArea: 0.15 },
+                series: [{ values: days.map(function(d) { return dayMap[d]; }), lineColor: '#3a8a9e', backgroundColor: '#3a8a9e' }]
+              },
+              height: 300, width: '100%'
+            });
+          }
+        }
+
         // Top pages table
-        const pagesTbody = document.querySelector('#pagesTable tbody');
-        pagesTbody.innerHTML = data.topPages.map((p) => `
-          <tr>
-            <td>${p.url}</td>
-            <td>${p.pageviews}</td>
-            <td>${p.unique_sessions}</td>
-            <td>${p.avg_time_on_page ?? 'N/A'}</td>
-          </tr>
-        `).join('');
+        document.querySelector('#pagesTable tbody').innerHTML = data.topPages.map(function(p) {
+          return '<tr><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + p.url + '</td><td>' + p.pageviews + '</td><td>' + p.unique_sessions + '</td><td>' + (p.avg_time_on_page != null ? p.avg_time_on_page + 's' : '—') + '</td></tr>';
+        }).join('');
 
         // Sessions table
-        const sessionsTbody = document.querySelector('#sessionsTable tbody');
-        sessionsTbody.innerHTML = data.sessions.slice(0, 25).map((s) => `
-          <tr>
-            <td style="font-family:monospace; font-size:0.8rem;">${s.session_id || 'N/A'}</td>
-            <td>${s.event_count}</td>
-            <td>${s.event_types || ''}</td>
-            <td>${s.first_seen || ''}</td>
-            <td>${s.last_seen || ''}</td>
-          </tr>
-        `).join('');
+        document.querySelector('#sessionsTable tbody').innerHTML = data.sessions.slice(0, 25).map(function(s) {
+          return '<tr><td class="mono">' + (s.session_id ? s.session_id.substring(0, 12) : '—') + '</td><td>' + s.event_count + '</td><td>' + (s.event_types || '') + '</td><td style="white-space:nowrap;font-size:0.78rem;">' + (s.first_seen || '') + '</td><td style="white-space:nowrap;font-size:0.78rem;">' + (s.last_seen || '') + '</td></tr>';
+        }).join('');
 
         loadComments();
-      } catch (err) {
-        console.error('Failed to load behavioral data:', err);
-      }
+      } catch (err) { console.error('Behavioral load failed:', err); }
     }
 
     async function loadComments() {
-      const res = await fetch(`/api/reports/${SLUG}/comments`);
-      const { comments } = await res.json();
-      const list = document.getElementById('commentsList');
-      if (comments.length === 0) {
-        list.innerHTML = '<p class="muted">No comments yet.</p>';
-        return;
-      }
-      list.innerHTML = comments.map((c) => `
-        <div class="comment">
-          <div class="comment-meta">${c.username} — ${new Date(c.created_at).toLocaleString()}</div>
-          <div>${c.comment_text}</div>
-        </div>
-      `).join('');
+      var res = await fetch('/api/reports/' + SLUG + '/comments');
+      var d = await res.json();
+      var list = document.getElementById('commentsList');
+      list.innerHTML = d.comments.length === 0
+        ? '<p class="muted" style="font-size:0.85rem;">No analyst comments yet.</p>'
+        : d.comments.map(function(c) { return '<div class="comment"><div class="comment-meta">' + c.username + ' &middot; ' + new Date(c.created_at).toLocaleString() + '</div><div class="comment-text">' + c.comment_text + '</div></div>'; }).join('');
     }
 
     async function postComment() {
-      const text = document.getElementById('commentText').value.trim();
+      var el = document.getElementById('commentText'), text = el.value.trim();
       if (!text) return;
-      await fetch(`/api/reports/${SLUG}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ comment_text: text })
-      });
-      document.getElementById('commentText').value = '';
+      await fetch('/api/reports/' + SLUG + '/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment_text: text }) });
+      el.value = '';
       loadComments();
     }
 

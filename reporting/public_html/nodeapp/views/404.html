@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>404 - Not Found</title>
+  <title>404 — Page Not Found</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <header class="site-header">
+  <header class="site-header" role="banner">
     <div class="header-inner">
       <h1>Analytics Reporting</h1>
-      <nav>
+      <nav aria-label="Main navigation">
         <a href="/dashboard">Dashboard</a>
         <a href="/reports">Reports</a>
         <a href="/logout">Logout</a>
@@ -18,12 +18,11 @@
     </div>
   </header>
 
-  <div class="container error-page">
-    <div class="error-code">404</div>
+  <main class="container error-page" role="main">
+    <div class="error-code" aria-hidden="true">404</div>
     <p class="error-message">Page Not Found</p>
-    <p>The page you're looking for doesn't exist or has been moved.</p>
-    <br />
+    <p style="color:var(--slate); max-width:400px; margin:0 auto 2rem;">The page you're looking for doesn't exist or has been moved.</p>
     <a href="/dashboard" class="btn">Back to Dashboard</a>
-  </div>
+  </main>
 </body>
 </html>

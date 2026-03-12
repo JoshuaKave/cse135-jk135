@@ -343,6 +343,88 @@ app.get('/api/stats/errors', requireAuth, requireSection(SECTIONS.PERFORMANCE), 
   }
 });
 
+// ── Technographics Stats ─────────────────────────────────
+
+app.get('/api/stats/technographics', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
+  try {
+    const viewportBreakdown = db.prepare(`
+      SELECT
+        CASE
+          WHEN viewport_width < 576 THEN 'Mobile (<576px)'
+          WHEN viewport_width < 992 THEN 'Tablet (576-991px)'
+          WHEN viewport_width < 1440 THEN 'Desktop (992-1439px)'
+          ELSE 'Large (1440px+)'
+        END as device_class,
+        COUNT(*) as count
+      FROM events
+      WHERE viewport_width IS NOT NULL
+      GROUP BY device_class
+      ORDER BY count DESC
+    `).all();
+
+    const colorScheme = db.prepare(`
+      SELECT
+        COALESCE(color_scheme, 'unknown') as scheme,
+        COUNT(*) as count
+      FROM events
+      WHERE color_scheme IS NOT NULL AND color_scheme != ''
+      GROUP BY scheme
+      ORDER BY count DESC
+    `).all();
+
+    const languages = db.prepare(`
+      SELECT
+        SUBSTR(language, 1, 2) as lang,
+        COUNT(*) as count
+      FROM events
+      WHERE language IS NOT NULL AND language != ''
+      GROUP BY lang
+      ORDER BY count DESC
+      LIMIT 10
+    `).all();
+
+    const timezones = db.prepare(`
+      SELECT
+        timezone as tz,
+        COUNT(*) as count
+      FROM events
+      WHERE timezone IS NOT NULL AND timezone != ''
+      GROUP BY tz
+      ORDER BY count DESC
+      LIMIT 10
+    `).all();
+
+    res.json({ viewportBreakdown, colorScheme, languages, timezones });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Referrer Stats ───────────────────────────────────────
+
+app.get('/api/stats/referrers', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
+  try {
+    const referrers = db.prepare(`
+      SELECT
+        CASE
+          WHEN referrer IS NULL OR referrer = '' THEN 'Direct / None'
+          ELSE referrer
+        END as source,
+        COUNT(*) as count,
+        COUNT(DISTINCT session_id) as sessions
+      FROM events
+      WHERE event_type IN ('pageview', 'page_exit')
+      GROUP BY source
+      ORDER BY count DESC
+      LIMIT 15
+    `).all();
+
+    res.json({ referrers });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Report Comments ──────────────────────────────────────
 
 app.get('/api/reports/:slug/comments', requireAuth, (req, res) => {

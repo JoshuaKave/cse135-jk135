@@ -3,60 +3,56 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reporting Login</title>
+  <title>Sign In — Analytics Reporting</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body class="login-page">
   <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
 
   <main>
-    <h1 style="text-align:center; margin-bottom:0.25rem;">Reporting Access</h1>
-    <p class="muted" style="text-align:center; margin-top:0;">Database-backed users, roles, and section-level permissions.</p>
+    <div class="login-title">
+      <h1>Analytics Reporting</h1>
+      <p>Role-based access with section-level permissions</p>
+    </div>
 
-    <div id="error" class="error-banner" hidden></div>
+    <div id="error" class="error-banner" role="alert" hidden></div>
 
     <div class="form-grid">
-      <section class="card">
-        <h2>Sign in</h2>
+      <section class="card" aria-labelledby="signin-heading">
+        <h3 id="signin-heading">Sign In</h3>
         <form method="POST" action="/login">
-          <label>Username
-            <input type="text" name="username" required />
-          </label>
-          <label>Password
-            <input type="password" name="password" required />
-          </label>
-          <button type="submit">Sign in</button>
+          <label for="login-user">Username</label>
+          <input type="text" id="login-user" name="username" autocomplete="username" required />
+          <label for="login-pass">Password</label>
+          <input type="password" id="login-pass" name="password" autocomplete="current-password" required />
+          <button type="submit" style="margin-top:1.25rem; width:100%;">Sign In</button>
         </form>
       </section>
 
-      <section class="card">
-        <h2>Sign up</h2>
+      <section class="card" aria-labelledby="signup-heading">
+        <h3 id="signup-heading">Create Account</h3>
         <form method="POST" action="/signup">
-          <label>Username
-            <input type="text" name="username" required />
-          </label>
-          <label>Display name
-            <input type="text" name="display_name" />
-          </label>
-          <label>Password
-            <input type="password" name="password" required />
-          </label>
-          <label>Role
-            <select name="role">
-              <option value="viewer">Viewer</option>
-              <option value="analyst">Analyst</option>
-              <option value="super_admin">Super Admin</option>
-            </select>
-          </label>
+          <label for="signup-user">Username</label>
+          <input type="text" id="signup-user" name="username" autocomplete="username" required />
+          <label for="signup-name">Display Name</label>
+          <input type="text" id="signup-name" name="display_name" autocomplete="name" />
+          <label for="signup-pass">Password</label>
+          <input type="password" id="signup-pass" name="password" autocomplete="new-password" required />
+          <label for="signup-role">Role</label>
+          <select id="signup-role" name="role">
+            <option value="viewer">Viewer</option>
+            <option value="analyst">Analyst</option>
+            <option value="super_admin">Super Admin</option>
+          </select>
           <fieldset>
-            <legend>Analyst sections</legend>
+            <legend>Analyst Sections</legend>
             <label><input type="checkbox" name="sections" value="performance" /> Performance</label>
             <label><input type="checkbox" name="sections" value="behavioral" /> Behavioral</label>
             <label><input type="checkbox" name="sections" value="reports" /> Reports</label>
           </fieldset>
-          <button type="submit">Create account</button>
+          <button type="submit" style="margin-top:0.5rem; width:100%;">Create Account</button>
         </form>
-        <p class="muted" style="padding:0 0.5rem; font-size:0.85rem;">Viewers can only access saved reports. Analysts automatically get report access, plus the sections selected here.</p>
+        <p class="muted" style="font-size:0.78rem; margin-top:0.75rem;">Viewers see saved reports only. Analysts get report access plus selected sections.</p>
       </section>
     </div>
   </main>

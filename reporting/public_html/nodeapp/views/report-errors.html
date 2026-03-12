@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Error Analysis</title>
+  <title>Error Analysis — Analytics Reporting</title>
   <link rel="stylesheet" href="/styles.css" />
-  <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
+  <script src="https://cdn.zingchart.com/zingchart.min.js" defer></script>
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to content</a>
   <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
 
-  <header class="site-header">
+  <header class="site-header" role="banner">
     <div class="header-inner">
       <h1>Analytics Reporting</h1>
-      <nav>
+      <nav aria-label="Main navigation">
         <a href="/dashboard">Dashboard</a>
         <a href="/reports" class="active">Reports</a>
         <a href="/logout">Logout</a>
@@ -21,158 +22,172 @@
     </div>
   </header>
 
-  <div class="container">
-    <div class="export-bar">
-      <a href="/api/export/error-analysis" class="btn">Export PDF</a>
-    </div>
-
-    <h2>Error Analysis</h2>
-    <p class="muted">JavaScript errors, promise rejections, and resource failures.</p>
-
-    <div class="grid" id="summaryCards"></div>
-
-    <section class="card">
-      <h2>Errors Over Time</h2>
-      <div id="errorsTimeChart" class="chart-container"></div>
-    </section>
-
-    <section class="card">
-      <h2>Errors by Page</h2>
-      <div id="errorsByPageChart" class="chart-container"></div>
-    </section>
-
-    <section class="card">
-      <h2>Recent Errors</h2>
-      <table id="errorsTable">
-        <thead>
-          <tr><th>Time</th><th>URL</th><th>Title / Message</th><th>Session</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <section class="card comments-section">
-      <h2>Analyst Comments</h2>
-      <div id="commentsList"></div>
-      <div id="commentForm" class="mt-1">
-        <textarea id="commentText" placeholder="Add your analysis or observations..."></textarea>
-        <button onclick="postComment()">Add Comment</button>
+  <div class="page-title-bar">
+    <div class="title-inner">
+      <div>
+        <h2>Error Analysis</h2>
+        <p class="subtitle">JavaScript errors, promise rejections, and resource failures</p>
       </div>
-    </section>
+      <div class="export-bar">
+        <a href="/reports" class="btn btn-outline btn-sm">&larr; All Reports</a>
+        <a href="/api/export/error-analysis" class="btn btn-sm">Export PDF</a>
+      </div>
+    </div>
   </div>
 
+  <main id="main-content" class="container">
+
+    <!-- KPI Row -->
+    <div class="kpi-grid" id="errorKPIs" role="region" aria-label="Error summary">
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:88px;"></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid-2">
+      <article class="card">
+        <h3><span class="card-icon" aria-hidden="true">&#x1F4C9;</span> Error Trend</h3>
+        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Daily error count — tracks whether error rate is improving or worsening over time</p>
+        <div id="errorsTimeChart" class="chart-container"></div>
+      </article>
+      <article class="card">
+        <h3><span class="card-icon" aria-hidden="true">&#x1F4CD;</span> Errors by Page</h3>
+        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Which pages generate the most errors — prioritize fixes for highest-impact pages</p>
+        <div id="errorsByPageChart" class="chart-container"></div>
+      </article>
+    </div>
+
+    <!-- Error Log Table -->
+    <article class="card">
+      <h3><span class="card-icon" aria-hidden="true">&#x1F6A8;</span> Recent Error Log</h3>
+      <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Most recent error events with context for debugging</p>
+      <div class="table-wrap">
+        <table id="errorsTable" aria-label="Recent errors">
+          <thead>
+            <tr>
+              <th scope="col">Timestamp</th>
+              <th scope="col">Page URL</th>
+              <th scope="col">Message</th>
+              <th scope="col">Session</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </article>
+
+    <!-- Analyst Comments -->
+    <article class="card comments-section" aria-label="Analyst comments">
+      <h3><span class="card-icon" aria-hidden="true">&#x1F4AC;</span> Analyst Comments</h3>
+      <div id="commentsList"></div>
+      <div id="commentForm" class="mt-1">
+        <label for="commentText" class="sr-only">Add a comment</label>
+        <textarea id="commentText" placeholder="Share your analysis or observations about this data..."></textarea>
+        <button onclick="postComment()" style="margin-top:0.5rem;">Post Comment</button>
+      </div>
+    </article>
+
+  </main>
+
   <script>
-    const SLUG = 'error-analysis';
+    var SLUG = 'error-analysis';
+    var T = {
+      g: { backgroundColor: 'transparent', borderWidth: 0, plotarea: { margin: '40 24 56 56' } },
+      tt: { backgroundColor: '#0f2b38', fontColor: '#fff', fontSize: '12px', fontFamily: 'system-ui', borderRadius: '6px', padding: '8px 12px', shadow: false },
+      sx: { lineColor: 'rgba(136,183,196,0.3)', tick: { lineColor: 'rgba(136,183,196,0.3)' }, item: { fontColor: '#4a5568', fontSize: '10px' }, guide: { visible: false } },
+      sy: { lineColor: 'transparent', tick: { visible: false }, item: { fontColor: '#94a3b8', fontSize: '10px' }, guide: { lineColor: 'rgba(136,183,196,0.12)' } },
+      anim: { animation: { effect: 'ANIMATION_EXPAND_BOTTOM', method: 'ANIMATION_BACK_EASE_OUT', speed: 500 } }
+    };
+
+    function kpi(label, value, unit, variant) {
+      return '<div class="kpi-card' + (variant ? ' kpi-' + variant : '') + '"><div class="kpi-label">' + label + '</div><div class="kpi-value">' + (value != null ? value : '—') + '<span class="kpi-unit">' + (unit || '') + '</span></div></div>';
+    }
 
     async function load() {
       try {
-        const [errRes, configRes] = await Promise.all([
+        var [errRes, configRes] = await Promise.all([
           fetch('/api/stats/errors'),
           fetch('/api/dashboard/config')
         ]);
-        const data = await errRes.json();
-        const config = await configRes.json();
+        var data = await errRes.json();
+        var config = await configRes.json();
 
-        if (config.user.role === 'viewer') {
-          document.getElementById('commentForm').classList.add('hidden');
-        }
+        if (config.user.role === 'viewer') document.getElementById('commentForm').classList.add('hidden');
 
-        // Summary cards
-        const cards = document.getElementById('summaryCards');
-        cards.innerHTML = [
-          { label: 'Total Errors', value: data.totalErrors },
-          { label: 'Total Events', value: data.totalEvents },
-          { label: 'Error Rate', value: data.errorRate + '%' }
-        ].map((m) => `
-          <div class="card" style="text-align:center;">
-            <div class="muted" style="font-size:0.8rem;">${m.label}</div>
-            <div style="font-size:1.5rem; font-weight:700;">${m.value}</div>
-          </div>
-        `).join('');
+        // KPI Cards
+        document.getElementById('errorKPIs').innerHTML = [
+          kpi('Total Errors', data.totalErrors, '', 'coral'),
+          kpi('Total Events', data.totalEvents, ''),
+          kpi('Error Rate', data.errorRate, '%', data.errorRate > 5 ? 'coral' : 'teal')
+        ].join('');
 
-        // Errors over time
+        // Error trend (line) — coral colored to indicate errors
         if (data.errorsByDay.length > 0) {
           zingchart.render({
             id: 'errorsTimeChart',
             data: {
-              type: 'line',
-              title: { text: 'Errors per Day' },
-              scaleX: { labels: data.errorsByDay.map((r) => r.day), label: { text: 'Date' } },
-              scaleY: { label: { text: 'Error Count' } },
-              series: [{ values: data.errorsByDay.map((r) => r.count), lineColor: '#c9553d', marker: { backgroundColor: '#c9553d' } }]
+              ...T.g, type: 'area',
+              scaleX: { ...T.sx, labels: data.errorsByDay.map(function(r) { return r.day.substring(5); }) },
+              scaleY: T.sy,
+              tooltip: T.tt,
+              plot: { ...T.anim, aspect: 'spline', lineWidth: '2px', marker: { size: 3, backgroundColor: '#c9553d', borderColor: '#c9553d' }, alphaArea: 0.12 },
+              series: [{ values: data.errorsByDay.map(function(r) { return r.count; }), lineColor: '#c9553d', backgroundColor: '#c9553d' }]
             },
-            height: 360, width: '100%'
+            height: 340, width: '100%'
           });
         }
 
-        // Errors by page
+        // Errors by page — horizontal bar (NOT pie — many URLs make pie unreadable)
         if (data.errorsByPage.length > 0) {
+          var pages = data.errorsByPage.slice(0, 8);
+          var labels = pages.map(function(p) { try { return new URL(p.url).pathname; } catch(e) { return p.url.length > 30 ? '...' + p.url.slice(-27) : p.url; } });
+
           zingchart.render({
             id: 'errorsByPageChart',
             data: {
-              type: 'pie',
-              title: { text: 'Errors by Page' },
-              plot: {
-                valueBox: { placement: 'out', text: '%t: %v', fontSize: 11 },
-                tooltip: { text: '%t\nErrors: %v\nPercent: %npv%' }
-              },
-              series: data.errorsByPage.map((r) => ({ text: r.url, values: [r.error_count] }))
+              ...T.g, type: 'hbar',
+              scaleX: { ...T.sx, labels: labels, item: { fontColor: '#4a5568', fontSize: '10px', maxChars: 25 } },
+              scaleY: T.sy,
+              tooltip: { ...T.tt, text: '%v errors' },
+              plot: { ...T.anim, barWidth: '55%', borderRadius: '3px', valueBox: { text: '%v', placement: 'out', fontColor: '#4a5568', fontSize: '10px' } },
+              series: [{ values: pages.map(function(p) { return p.error_count; }), backgroundColor: '#c9553d' }]
             },
-            height: 360, width: '100%'
+            height: 340, width: '100%'
           });
         }
 
-        // Errors table
-        const tbody = document.querySelector('#errorsTable tbody');
-        tbody.innerHTML = data.errors.slice(0, 50).map((e) => {
-          let message = e.title || '';
+        // Error log table
+        document.querySelector('#errorsTable tbody').innerHTML = data.errors.slice(0, 40).map(function(e) {
+          var message = e.title || '';
           if (e.raw_payload) {
-            try {
-              const raw = JSON.parse(e.raw_payload);
-              if (raw.errorCount) message += ` (${raw.errorCount} errors)`;
-            } catch (_) { /* ignore */ }
+            try { var raw = JSON.parse(e.raw_payload); if (raw.errorCount) message += ' (' + raw.errorCount + ' errors)'; } catch(x) {}
           }
-          return `
-            <tr>
-              <td style="white-space:nowrap;">${e.server_timestamp || ''}</td>
-              <td>${e.url || ''}</td>
-              <td>${message}</td>
-              <td style="font-family:monospace; font-size:0.8rem;">${e.session_id ? e.session_id.substring(0, 12) + '...' : 'N/A'}</td>
-            </tr>
-          `;
+          return '<tr>' +
+            '<td style="white-space:nowrap; font-size:0.78rem;">' + (e.server_timestamp || '') + '</td>' +
+            '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (e.url || '') + '</td>' +
+            '<td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + message + '</td>' +
+            '<td class="mono">' + (e.session_id ? e.session_id.substring(0, 10) : '—') + '</td></tr>';
         }).join('');
 
         loadComments();
-      } catch (err) {
-        console.error('Failed to load error data:', err);
-      }
+      } catch (err) { console.error('Error load failed:', err); }
     }
 
     async function loadComments() {
-      const res = await fetch(`/api/reports/${SLUG}/comments`);
-      const { comments } = await res.json();
-      const list = document.getElementById('commentsList');
-      if (comments.length === 0) {
-        list.innerHTML = '<p class="muted">No comments yet.</p>';
-        return;
-      }
-      list.innerHTML = comments.map((c) => `
-        <div class="comment">
-          <div class="comment-meta">${c.username} — ${new Date(c.created_at).toLocaleString()}</div>
-          <div>${c.comment_text}</div>
-        </div>
-      `).join('');
+      var res = await fetch('/api/reports/' + SLUG + '/comments');
+      var d = await res.json();
+      var list = document.getElementById('commentsList');
+      list.innerHTML = d.comments.length === 0
+        ? '<p class="muted" style="font-size:0.85rem;">No analyst comments yet.</p>'
+        : d.comments.map(function(c) { return '<div class="comment"><div class="comment-meta">' + c.username + ' &middot; ' + new Date(c.created_at).toLocaleString() + '</div><div class="comment-text">' + c.comment_text + '</div></div>'; }).join('');
     }
 
     async function postComment() {
-      const text = document.getElementById('commentText').value.trim();
+      var el = document.getElementById('commentText'), text = el.value.trim();
       if (!text) return;
-      await fetch(`/api/reports/${SLUG}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ comment_text: text })
-      });
-      document.getElementById('commentText').value = '';
+      await fetch('/api/reports/' + SLUG + '/comments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment_text: text }) });
+      el.value = '';
       loadComments();
     }
 

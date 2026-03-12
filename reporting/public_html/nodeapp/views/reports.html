@@ -3,28 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reports</title>
+  <title>Reports — Analytics Reporting</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to content</a>
   <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
 
-  <header class="site-header">
+  <header class="site-header" role="banner">
     <div class="header-inner">
       <h1>Analytics Reporting</h1>
-      <nav>
+      <nav aria-label="Main navigation">
         <a href="/dashboard">Dashboard</a>
-        <a href="/reports" class="active">Reports</a>
+        <a href="/reports" class="active" aria-current="page">Reports</a>
         <a href="/logout">Logout</a>
       </nav>
     </div>
   </header>
 
-  <div class="container">
-    <h2>Reports</h2>
-    <p class="muted">Viewers see saved reports. Analysts and admins see reports matching their allowed sections.</p>
-    <div id="reportList"></div>
+  <div class="page-title-bar">
+    <div class="title-inner">
+      <div>
+        <h2>Reports</h2>
+        <p class="subtitle">Select a report to view detailed analytics with charts, tables, and analyst commentary.</p>
+      </div>
+    </div>
   </div>
+
+  <main id="main-content" class="container">
+    <div id="reportList" class="grid-auto" role="list">
+      <div class="card skeleton" style="height:120px;" aria-hidden="true"></div>
+      <div class="card skeleton" style="height:120px;" aria-hidden="true"></div>
+      <div class="card skeleton" style="height:120px;" aria-hidden="true"></div>
+    </div>
+  </main>
 
   <script>
     const REPORT_ROUTES = {
@@ -33,38 +45,48 @@
       'error-analysis': '/reports/errors'
     };
 
+    const REPORT_ICONS = {
+      'performance-snapshot': '&#x26A1;',
+      'behavior-performance-overview': '&#x1F465;',
+      'error-analysis': '&#x1F6A8;'
+    };
+
     async function loadReports() {
       const res = await fetch('/api/reports');
+      const list = document.getElementById('reportList');
+
       if (!res.ok) {
-        document.getElementById('reportList').innerHTML = '<p>Unable to load reports.</p>';
+        list.innerHTML = '<p class="muted">Unable to load reports.</p>';
         return;
       }
 
-      const payload = await res.json();
-      const reportList = document.getElementById('reportList');
-      reportList.innerHTML = '';
-
-      if (!payload.reports.length) {
-        reportList.innerHTML = '<p>No reports available for your access level yet.</p>';
+      const { reports } = await res.json();
+      if (!reports.length) {
+        list.innerHTML = '<p class="muted">No reports available for your access level.</p>';
         return;
       }
 
-      payload.reports.forEach((report) => {
+      list.innerHTML = reports.map(report => {
         const route = REPORT_ROUTES[report.slug];
-        const wrap = document.createElement(route ? 'a' : 'div');
-        if (route) {
-          wrap.href = route;
-          wrap.className = 'card-link';
-        }
-        wrap.innerHTML = `
-          <section class="card">
-            <h2>${report.name}</h2>
-            <p class="muted">${report.description || 'No description provided.'}</p>
-            <div>${report.sections.map((s) => `<span class="section-tag">${s}</span>`).join('')}</div>
-          </section>
-        `;
-        reportList.appendChild(wrap);
-      });
+        const icon = REPORT_ICONS[report.slug] || '&#x1F4C4;';
+        const tags = report.sections.map(s => `<span class="section-tag">${s}</span>`).join('');
+
+        return route
+          ? `<a href="${route}" class="card-link" role="listitem">
+              <article class="card report-card">
+                <h3><span class="card-icon" aria-hidden="true">${icon}</span> ${report.name}</h3>
+                <p class="report-desc">${report.description || 'No description.'}</p>
+                <div>${tags}</div>
+              </article>
+            </a>`
+          : `<div role="listitem">
+              <article class="card report-card">
+                <h3>${report.name}</h3>
+                <p class="report-desc">${report.description || 'No description.'}</p>
+                <div>${tags}</div>
+              </article>
+            </div>`;
+      }).join('');
     }
 
     loadReports();
