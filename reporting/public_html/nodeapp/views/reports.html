@@ -4,24 +4,35 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reports</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 24px; background: #f8fafc; color: #1d2939; }
-    .card { background: white; border: 1px solid #d0d5dd; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
-    .muted { color: #667085; }
-    .section-tag { display: inline-block; margin-right: 8px; padding: 4px 8px; border-radius: 999px; background: #ecfdf3; color: #027a48; font-size: 12px; }
-  </style>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <h1>Reports</h1>
-  <nav>
-    <a href="/dashboard">Dashboard</a> |
-    <a href="/reports">Reports</a> |
-    <a href="/logout">Logout</a>
-  </nav>
-  <p class="muted">Viewers only see static saved reports. Analysts and admins see reports that match their allowed sections.</p>
-  <div id="reportList"></div>
+  <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <h1>Analytics Reporting</h1>
+      <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/reports" class="active">Reports</a>
+        <a href="/logout">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    <h2>Reports</h2>
+    <p class="muted">Viewers see saved reports. Analysts and admins see reports matching their allowed sections.</p>
+    <div id="reportList"></div>
+  </div>
 
   <script>
+    const REPORT_ROUTES = {
+      'performance-snapshot': '/reports/performance',
+      'behavior-performance-overview': '/reports/behavioral',
+      'error-analysis': '/reports/errors'
+    };
+
     async function loadReports() {
       const res = await fetch('/api/reports');
       if (!res.ok) {
@@ -39,12 +50,18 @@
       }
 
       payload.reports.forEach((report) => {
-        const wrap = document.createElement('section');
-        wrap.className = 'card';
+        const route = REPORT_ROUTES[report.slug];
+        const wrap = document.createElement(route ? 'a' : 'div');
+        if (route) {
+          wrap.href = route;
+          wrap.className = 'card-link';
+        }
         wrap.innerHTML = `
-          <h2>${report.name}</h2>
-          <p class="muted">${report.description || 'No description provided.'}</p>
-          <div>${report.sections.map((section) => `<span class="section-tag">${section}</span>`).join('')}</div>
+          <section class="card">
+            <h2>${report.name}</h2>
+            <p class="muted">${report.description || 'No description provided.'}</p>
+            <div>${report.sections.map((s) => `<span class="section-tag">${s}</span>`).join('')}</div>
+          </section>
         `;
         reportList.appendChild(wrap);
       });

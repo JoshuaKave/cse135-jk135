@@ -4,69 +4,70 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard</title>
+  <link rel="stylesheet" href="/styles.css" />
   <script src="https://cdn.zinggrid.com/zinggrid.min.js"></script>
   <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 24px; color: #1d2939; background: #f8fafc; }
-    nav { margin-bottom: 16px; }
-    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 16px 0 24px; }
-    .card { background: #fff; border: 1px solid #d0d5dd; border-radius: 14px; padding: 16px; }
-    .pill { display: inline-block; margin: 4px 8px 0 0; padding: 5px 9px; border-radius: 999px; background: #e0e7ff; color: #3730a3; font-size: 12px; }
-    .hidden { display: none; }
-    .muted { color: #667085; }
-  </style>
 </head>
 <body>
-  <h1>Dashboard</h1>
-  <nav>
-    <a href="/dashboard">Dashboard</a> |
-    <a href="/reports">Reports</a> |
-    <a href="/logout">Logout</a>
-  </nav>
-  <div class="card">
-    <h2 id="welcome">Loading access profile…</h2>
-    <p class="muted">This page now adapts to role-based and section-level access.</p>
-    <div id="permissionPills"></div>
-  </div>
+  <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
 
-  <div class="grid">
-    <section id="performanceSection" class="card hidden">
-      <h2>Performance</h2>
-      <p class="muted">Event table, summary stats, and performance charting.</p>
+  <header class="site-header">
+    <div class="header-inner">
+      <h1>Analytics Reporting</h1>
+      <nav>
+        <a href="/dashboard" class="active">Dashboard</a>
+        <a href="/reports">Reports</a>
+        <a href="/logout">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2 id="welcome">Loading access profile...</h2>
+      <p class="muted">This page adapts to role-based and section-level access.</p>
+      <div id="permissionPills"></div>
+    </div>
+
+    <div class="grid">
+      <section id="performanceSection" class="card hidden">
+        <h2>Performance</h2>
+        <p class="muted">Event table, summary stats, and performance charting.</p>
+      </section>
+      <section id="behavioralSection" class="card hidden">
+        <h2>Behavioral</h2>
+        <p class="muted">Session-level behavioral exploration.</p>
+      </section>
+      <section id="adminSection" class="card hidden">
+        <h2>Admin</h2>
+        <p class="muted">User management visibility for super admins.</p>
+        <ul id="adminUsers"></ul>
+      </section>
+    </div>
+
+    <div id="eventsGridWrap" class="hidden">
+      <zing-grid
+        editor
+        controls
+        pager
+        page-size="10"
+        sort
+        filter
+        search
+        layout="row"
+        caption="Events"
+        src="/api/events">
+      </zing-grid>
+    </div>
+
+    <section id="chartsWrap" class="hidden">
+      <h2>Event Volume Over Time</h2>
+      <div id="eventVolumeChart" class="chart-container"></div>
+
+      <h2>Event Type Breakdown</h2>
+      <div id="eventTypeChart" class="chart-container"></div>
     </section>
-    <section id="behavioralSection" class="card hidden">
-      <h2>Behavioral</h2>
-      <p class="muted">Session-level behavioral exploration.</p>
-    </section>
-    <section id="adminSection" class="card hidden">
-      <h2>Admin</h2>
-      <p class="muted">User management visibility for super admins.</p>
-      <ul id="adminUsers"></ul>
-    </section>
   </div>
-
-  <div id="eventsGridWrap" class="hidden">
-    <zing-grid
-      editor
-      controls
-      pager
-      page-size="10"
-      sort
-      filter
-      search
-      layout="row"
-      caption="Events"
-      src="/api/events">
-    </zing-grid>
-  </div>
-
-  <section id="chartsWrap" class="hidden">
-    <h2>Event Volume Over Time</h2>
-    <div id="eventVolumeChart" style="width: 100%; height: 360px;"></div>
-
-    <h2>Event Type Breakdown</h2>
-    <div id="eventTypeChart" style="width: 100%; height: 360px;"></div>
-  </section>
 
   <script>
     const API_BASE = '/api';
@@ -77,17 +78,13 @@
 
     async function loadAccessConfig() {
       const res = await fetch(`${API_BASE}/dashboard/config`);
-      if (!res.ok) {
-        throw new Error('Failed to load dashboard config');
-      }
+      if (!res.ok) throw new Error('Failed to load dashboard config');
       return res.json();
     }
 
     async function loadAdminUsers() {
       const res = await fetch(`${API_BASE}/auth/users`);
-      if (!res.ok) {
-        return;
-      }
+      if (!res.ok) return;
 
       const payload = await res.json();
       const list = document.getElementById('adminUsers');
@@ -95,6 +92,20 @@
       payload.users.forEach((user) => {
         const item = document.createElement('li');
         item.textContent = `${user.displayName} (${user.username}) — ${user.role} — [${user.sections.join(', ')}]`;
+
+        if (user.role !== 'super_admin') {
+          const delBtn = document.createElement('button');
+          delBtn.className = 'btn-sm btn-danger';
+          delBtn.textContent = 'Delete';
+          delBtn.style.marginLeft = '0.5rem';
+          delBtn.onclick = async () => {
+            if (!confirm(`Delete user "${user.username}"?`)) return;
+            const r = await fetch(`${API_BASE}/auth/users/${user.id}`, { method: 'DELETE' });
+            if (r.ok) loadAdminUsers();
+          };
+          item.appendChild(delBtn);
+        }
+
         list.appendChild(item);
       });
     }
@@ -119,13 +130,9 @@
         show('eventsGridWrap', config.sections.performance || config.sections.behavioral);
         show('chartsWrap', config.sections.performance);
 
-        if (config.sections.admin) {
-          loadAdminUsers();
-        }
+        if (config.sections.admin) loadAdminUsers();
 
-        if (!config.sections.performance) {
-          return;
-        }
+        if (!config.sections.performance) return;
 
         const [eventsRes, summaryRes] = await Promise.all([
           fetch(`${API_BASE}/events?limit=500`),
@@ -135,14 +142,13 @@
         const events = await eventsRes.json();
         const summary = await summaryRes.json();
 
-        // Chart 1: Event volume over time (group by minute)
+        // Event volume over time (group by minute)
         const minuteBuckets = {};
         events.forEach((e) => {
           const ts = e.server_timestamp || e.client_timestamp;
           if (!ts) return;
           const d = new Date(ts);
           if (isNaN(d.getTime())) return;
-
           const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} `
             + `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
           minuteBuckets[key] = (minuteBuckets[key] || 0) + 1;
@@ -156,10 +162,7 @@
           data: {
             type: 'line',
             title: { text: 'Events per Minute' },
-            scaleX: {
-              label: { text: 'Time (minute)' },
-              labels: sortedTimes
-            },
+            scaleX: { label: { text: 'Time (minute)' }, labels: sortedTimes },
             scaleY: { label: { text: 'Event Count' } },
             series: [{ values: volumeValues }]
           },
@@ -167,7 +170,7 @@
           width: '100%'
         });
 
-        // Chart 2: Event type breakdown
+        // Event type breakdown
         const typeSeries = (summary.event_types || []).map((row) => ({
           text: row.event_type || 'unknown',
           values: [row.count || 0]
@@ -179,16 +182,8 @@
             type: 'pie',
             title: { text: 'Event Type Breakdown' },
             plot: {
-              // show labels on slices
-              valueBox: {
-                placement: 'out',
-                text: '%t: %v (%npv%)',
-                fontSize: 12
-              },
-              tooltip: {
-                // %t = text, %v = value, %npv = percent
-                text: '%t\nCount: %v\nPercent: %npv%'
-              }
+              valueBox: { placement: 'out', text: '%t: %v (%npv%)', fontSize: 12 },
+              tooltip: { text: '%t\nCount: %v\nPercent: %npv%' }
             },
             series: typeSeries
           },

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Behavioral Report</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
+</head>
+<body>
+  <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <h1>Analytics Reporting</h1>
+      <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/reports" class="active">Reports</a>
+        <a href="/logout">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="export-bar">
+      <a href="/api/export/behavior-performance-overview" class="btn">Export PDF</a>
+    </div>
+
+    <h2>Behavior + Performance Overview</h2>
+    <p class="muted">Session activity, top pages, and user engagement patterns.</p>
+
+    <section class="card">
+      <h2>Event Types by Session Reach</h2>
+      <div id="eventTypesChart" class="chart-container"></div>
+    </section>
+
+    <section class="card">
+      <h2>Top Pages</h2>
+      <table id="pagesTable">
+        <thead>
+          <tr><th>URL</th><th>Pageviews</th><th>Unique Sessions</th><th>Avg Time on Page (s)</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Sessions</h2>
+      <table id="sessionsTable">
+        <thead>
+          <tr><th>Session ID</th><th>Events</th><th>Event Types</th><th>First Seen</th><th>Last Seen</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="card comments-section">
+      <h2>Analyst Comments</h2>
+      <div id="commentsList"></div>
+      <div id="commentForm" class="mt-1">
+        <textarea id="commentText" placeholder="Add your analysis or observations..."></textarea>
+        <button onclick="postComment()">Add Comment</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const SLUG = 'behavior-performance-overview';
+
+    async function load() {
+      try {
+        const [behavRes, configRes] = await Promise.all([
+          fetch('/api/stats/behavioral'),
+          fetch('/api/dashboard/config')
+        ]);
+        const data = await behavRes.json();
+        const config = await configRes.json();
+
+        if (config.user.role === 'viewer') {
+          document.getElementById('commentForm').classList.add('hidden');
+        }
+
+        // Event types chart
+        if (data.eventTypesBySession.length > 0) {
+          zingchart.render({
+            id: 'eventTypesChart',
+            data: {
+              type: 'bar',
+              title: { text: 'Event Types: Total Count vs Session Reach' },
+              scaleX: { labels: data.eventTypesBySession.map((r) => r.event_type) },
+              scaleY: { label: { text: 'Count' } },
+              series: [
+                { text: 'Total Events', values: data.eventTypesBySession.map((r) => r.total_count), backgroundColor: '#2c5f7c' },
+                { text: 'Sessions', values: data.eventTypesBySession.map((r) => r.session_count), backgroundColor: '#88b7c4' }
+              ]
+            },
+            height: 360, width: '100%'
+          });
+        }
+
+        // Top pages table
+        const pagesTbody = document.querySelector('#pagesTable tbody');
+        pagesTbody.innerHTML = data.topPages.map((p) => `
+          <tr>
+            <td>${p.url}</td>
+            <td>${p.pageviews}</td>
+            <td>${p.unique_sessions}</td>
+            <td>${p.avg_time_on_page ?? 'N/A'}</td>
+          </tr>
+        `).join('');
+
+        // Sessions table
+        const sessionsTbody = document.querySelector('#sessionsTable tbody');
+        sessionsTbody.innerHTML = data.sessions.slice(0, 25).map((s) => `
+          <tr>
+            <td style="font-family:monospace; font-size:0.8rem;">${s.session_id || 'N/A'}</td>
+            <td>${s.event_count}</td>
+            <td>${s.event_types || ''}</td>
+            <td>${s.first_seen || ''}</td>
+            <td>${s.last_seen || ''}</td>
+          </tr>
+        `).join('');
+
+        loadComments();
+      } catch (err) {
+        console.error('Failed to load behavioral data:', err);
+      }
+    }
+
+    async function loadComments() {
+      const res = await fetch(`/api/reports/${SLUG}/comments`);
+      const { comments } = await res.json();
+      const list = document.getElementById('commentsList');
+      if (comments.length === 0) {
+        list.innerHTML = '<p class="muted">No comments yet.</p>';
+        return;
+      }
+      list.innerHTML = comments.map((c) => `
+        <div class="comment">
+          <div class="comment-meta">${c.username} — ${new Date(c.created_at).toLocaleString()}</div>
+          <div>${c.comment_text}</div>
+        </div>
+      `).join('');
+    }
+
+    async function postComment() {
+      const text = document.getElementById('commentText').value.trim();
+      if (!text) return;
+      await fetch(`/api/reports/${SLUG}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment_text: text })
+      });
+      document.getElementById('commentText').value = '';
+      loadComments();
+    }
+
+    load();
+  </script>
+</body>
+</html>

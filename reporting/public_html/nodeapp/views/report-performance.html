@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Performance Report</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
+</head>
+<body>
+  <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <h1>Analytics Reporting</h1>
+      <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/reports" class="active">Reports</a>
+        <a href="/logout">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="export-bar">
+      <a href="/api/export/performance-snapshot" class="btn">Export PDF</a>
+    </div>
+
+    <h2>Performance Snapshot</h2>
+    <p class="muted">Core Web Vitals, timing metrics, and per-page performance breakdown.</p>
+
+    <div class="grid" id="vitalsCards"></div>
+
+    <section class="card">
+      <h2>Event Volume by Hour</h2>
+      <div id="volumeChart" class="chart-container"></div>
+    </section>
+
+    <section class="card">
+      <h2>Web Vitals Averages</h2>
+      <div id="vitalsChart" class="chart-container"></div>
+    </section>
+
+    <section class="card">
+      <h2>Performance by Page</h2>
+      <table id="pageTable">
+        <thead>
+          <tr><th>URL</th><th>Hits</th><th>Avg TTFB (ms)</th><th>Avg LCP (ms)</th><th>Avg CLS</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="card comments-section">
+      <h2>Analyst Comments</h2>
+      <div id="commentsList"></div>
+      <div id="commentForm" class="mt-1">
+        <textarea id="commentText" placeholder="Add your analysis or observations..."></textarea>
+        <button onclick="postComment()">Add Comment</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const SLUG = 'performance-snapshot';
+
+    async function load() {
+      try {
+        const [perfRes, configRes] = await Promise.all([
+          fetch('/api/stats/performance'),
+          fetch('/api/dashboard/config')
+        ]);
+        const data = await perfRes.json();
+        const config = await configRes.json();
+
+        // Hide comment form for viewers
+        if (config.user.role === 'viewer') {
+          document.getElementById('commentForm').classList.add('hidden');
+        }
+
+        // Vitals summary cards
+        const v = data.vitals;
+        const cards = document.getElementById('vitalsCards');
+        const metrics = [
+          { label: 'Avg TTFB', value: v.avg_ttfb ? v.avg_ttfb + ' ms' : 'N/A' },
+          { label: 'Avg LCP', value: v.avg_lcp ? v.avg_lcp + ' ms' : 'N/A' },
+          { label: 'Avg CLS', value: v.avg_cls ?? 'N/A' },
+          { label: 'Avg INP', value: v.avg_inp ? v.avg_inp + ' ms' : 'N/A' },
+          { label: 'Samples', value: v.sample_count }
+        ];
+        cards.innerHTML = metrics.map((m) => `
+          <div class="card" style="text-align:center;">
+            <div class="muted" style="font-size:0.8rem;">${m.label}</div>
+            <div style="font-size:1.5rem; font-weight:700;">${m.value}</div>
+          </div>
+        `).join('');
+
+        // Volume by hour chart
+        if (data.volumeByHour.length > 0) {
+          zingchart.render({
+            id: 'volumeChart',
+            data: {
+              type: 'bar',
+              title: { text: 'Events per Hour' },
+              scaleX: { labels: data.volumeByHour.map((r) => r.hour_bucket), label: { text: 'Hour' } },
+              scaleY: { label: { text: 'Count' } },
+              series: [{ values: data.volumeByHour.map((r) => r.count), backgroundColor: '#2c5f7c' }]
+            },
+            height: 360, width: '100%'
+          });
+        }
+
+        // Vitals bar chart
+        const vitalsLabels = ['TTFB', 'LCP', 'CLS (x1000)', 'INP'];
+        const vitalsValues = [v.avg_ttfb || 0, v.avg_lcp || 0, (v.avg_cls || 0) * 1000, v.avg_inp || 0];
+        zingchart.render({
+          id: 'vitalsChart',
+          data: {
+            type: 'bar',
+            title: { text: 'Average Web Vitals' },
+            scaleX: { labels: vitalsLabels },
+            scaleY: { label: { text: 'Value (ms / score)' } },
+            series: [{ values: vitalsValues, backgroundColor: '#88b7c4' }]
+          },
+          height: 360, width: '100%'
+        });
+
+        // Page table
+        const tbody = document.querySelector('#pageTable tbody');
+        tbody.innerHTML = data.byPage.map((p) => `
+          <tr>
+            <td>${p.url}</td>
+            <td>${p.hits}</td>
+            <td>${p.avg_ttfb ?? 'N/A'}</td>
+            <td>${p.avg_lcp ?? 'N/A'}</td>
+            <td>${p.avg_cls ?? 'N/A'}</td>
+          </tr>
+        `).join('');
+
+        loadComments();
+      } catch (err) {
+        console.error('Failed to load performance data:', err);
+      }
+    }
+
+    async function loadComments() {
+      const res = await fetch(`/api/reports/${SLUG}/comments`);
+      const { comments } = await res.json();
+      const list = document.getElementById('commentsList');
+      if (comments.length === 0) {
+        list.innerHTML = '<p class="muted">No comments yet.</p>';
+        return;
+      }
+      list.innerHTML = comments.map((c) => `
+        <div class="comment">
+          <div class="comment-meta">${c.username} — ${new Date(c.created_at).toLocaleString()}</div>
+          <div>${c.comment_text}</div>
+        </div>
+      `).join('');
+    }
+
+    async function postComment() {
+      const text = document.getElementById('commentText').value.trim();
+      if (!text) return;
+      await fetch(`/api/reports/${SLUG}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment_text: text })
+      });
+      document.getElementById('commentText').value = '';
+      loadComments();
+    }
+
+    load();
+  </script>
+</body>
+</html>

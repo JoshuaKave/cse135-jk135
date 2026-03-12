@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Error Analysis</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
+</head>
+<body>
+  <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <h1>Analytics Reporting</h1>
+      <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/reports" class="active">Reports</a>
+        <a href="/logout">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="export-bar">
+      <a href="/api/export/error-analysis" class="btn">Export PDF</a>
+    </div>
+
+    <h2>Error Analysis</h2>
+    <p class="muted">JavaScript errors, promise rejections, and resource failures.</p>
+
+    <div class="grid" id="summaryCards"></div>
+
+    <section class="card">
+      <h2>Errors Over Time</h2>
+      <div id="errorsTimeChart" class="chart-container"></div>
+    </section>
+
+    <section class="card">
+      <h2>Errors by Page</h2>
+      <div id="errorsByPageChart" class="chart-container"></div>
+    </section>
+
+    <section class="card">
+      <h2>Recent Errors</h2>
+      <table id="errorsTable">
+        <thead>
+          <tr><th>Time</th><th>URL</th><th>Title / Message</th><th>Session</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="card comments-section">
+      <h2>Analyst Comments</h2>
+      <div id="commentsList"></div>
+      <div id="commentForm" class="mt-1">
+        <textarea id="commentText" placeholder="Add your analysis or observations..."></textarea>
+        <button onclick="postComment()">Add Comment</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const SLUG = 'error-analysis';
+
+    async function load() {
+      try {
+        const [errRes, configRes] = await Promise.all([
+          fetch('/api/stats/errors'),
+          fetch('/api/dashboard/config')
+        ]);
+        const data = await errRes.json();
+        const config = await configRes.json();
+
+        if (config.user.role === 'viewer') {
+          document.getElementById('commentForm').classList.add('hidden');
+        }
+
+        // Summary cards
+        const cards = document.getElementById('summaryCards');
+        cards.innerHTML = [
+          { label: 'Total Errors', value: data.totalErrors },
+          { label: 'Total Events', value: data.totalEvents },
+          { label: 'Error Rate', value: data.errorRate + '%' }
+        ].map((m) => `
+          <div class="card" style="text-align:center;">
+            <div class="muted" style="font-size:0.8rem;">${m.label}</div>
+            <div style="font-size:1.5rem; font-weight:700;">${m.value}</div>
+          </div>
+        `).join('');
+
+        // Errors over time
+        if (data.errorsByDay.length > 0) {
+          zingchart.render({
+            id: 'errorsTimeChart',
+            data: {
+              type: 'line',
+              title: { text: 'Errors per Day' },
+              scaleX: { labels: data.errorsByDay.map((r) => r.day), label: { text: 'Date' } },
+              scaleY: { label: { text: 'Error Count' } },
+              series: [{ values: data.errorsByDay.map((r) => r.count), lineColor: '#c9553d', marker: { backgroundColor: '#c9553d' } }]
+            },
+            height: 360, width: '100%'
+          });
+        }
+
+        // Errors by page
+        if (data.errorsByPage.length > 0) {
+          zingchart.render({
+            id: 'errorsByPageChart',
+            data: {
+              type: 'pie',
+              title: { text: 'Errors by Page' },
+              plot: {
+                valueBox: { placement: 'out', text: '%t: %v', fontSize: 11 },
+                tooltip: { text: '%t\nErrors: %v\nPercent: %npv%' }
+              },
+              series: data.errorsByPage.map((r) => ({ text: r.url, values: [r.error_count] }))
+            },
+            height: 360, width: '100%'
+          });
+        }
+
+        // Errors table
+        const tbody = document.querySelector('#errorsTable tbody');
+        tbody.innerHTML = data.errors.slice(0, 50).map((e) => {
+          let message = e.title || '';
+          if (e.raw_payload) {
+            try {
+              const raw = JSON.parse(e.raw_payload);
+              if (raw.errorCount) message += ` (${raw.errorCount} errors)`;
+            } catch (_) { /* ignore */ }
+          }
+          return `
+            <tr>
+              <td style="white-space:nowrap;">${e.server_timestamp || ''}</td>
+              <td>${e.url || ''}</td>
+              <td>${message}</td>
+              <td style="font-family:monospace; font-size:0.8rem;">${e.session_id ? e.session_id.substring(0, 12) + '...' : 'N/A'}</td>
+            </tr>
+          `;
+        }).join('');
+
+        loadComments();
+      } catch (err) {
+        console.error('Failed to load error data:', err);
+      }
+    }
+
+    async function loadComments() {
+      const res = await fetch(`/api/reports/${SLUG}/comments`);
+      const { comments } = await res.json();
+      const list = document.getElementById('commentsList');
+      if (comments.length === 0) {
+        list.innerHTML = '<p class="muted">No comments yet.</p>';
+        return;
+      }
+      list.innerHTML = comments.map((c) => `
+        <div class="comment">
+          <div class="comment-meta">${c.username} — ${new Date(c.created_at).toLocaleString()}</div>
+          <div>${c.comment_text}</div>
+        </div>
+      `).join('');
+    }
+
+    async function postComment() {
+      const text = document.getElementById('commentText').value.trim();
+      if (!text) return;
+      await fetch(`/api/reports/${SLUG}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment_text: text })
+      });
+      document.getElementById('commentText').value = '';
+      loadComments();
+    }
+
+    load();
+  </script>
+</body>
+</html>

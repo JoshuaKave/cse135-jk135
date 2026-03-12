@@ -4,62 +4,62 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reporting Login</title>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
-<body>
-  <h1>Reporting Access</h1>
-  <p class="meta">Database-backed users, roles, and section-level permissions.</p>
+<body class="login-page">
+  <noscript><div class="noscript-warning">JavaScript is required to use this application.</div></noscript>
 
-  <div id="error" class="error" hidden></div>
+  <main>
+    <h1 style="text-align:center; margin-bottom:0.25rem;">Reporting Access</h1>
+    <p class="muted" style="text-align:center; margin-top:0;">Database-backed users, roles, and section-level permissions.</p>
 
-    <section class="card">
-      <h2>Sign in</h2>
-      <form method="POST" action="/login">
-        <label>
-          Username
-          <input type="text" name="username" required />
-        </label>
-        <label>
-          Password
-          <input type="password" name="password" required />
-        </label>
-        <button type="submit">Sign in</button>
-      </form>
-      <p class="hint">Seeded accounts: <code>admin/password123</code>, <code>Sam/password456</code>, <code>Sally/password789</code>, <code>viewer/viewer123</code>.</p>
-    </section>
+    <div id="error" class="error-banner" hidden></div>
 
-    <section class="card">
-      <h2>Sign up</h2>
-      <form method="POST" action="/signup">
-        <label>
-          Username
-          <input type="text" name="username" required />
-        </label>
-        <label>
-          Display name
-          <input type="text" name="display_name" />
-        </label>
-        <label>
-          Password
-          <input type="password" name="password" required />
-        </label>
-        <label>
-          Role
-          <select name="role">
-            <option value="viewer">Viewer</option>
-            <option value="analyst">Analyst</option>
-            <option value="super_admin">Super Admin</option>
-          </select>
-        </label>
-        <fieldset>
-          <legend>Analyst sections</legend>
+    <div class="form-grid">
+      <section class="card">
+        <h2>Sign in</h2>
+        <form method="POST" action="/login">
+          <label>Username
+            <input type="text" name="username" required />
+          </label>
+          <label>Password
+            <input type="password" name="password" required />
+          </label>
+          <button type="submit">Sign in</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Sign up</h2>
+        <form method="POST" action="/signup">
+          <label>Username
+            <input type="text" name="username" required />
+          </label>
+          <label>Display name
+            <input type="text" name="display_name" />
+          </label>
+          <label>Password
+            <input type="password" name="password" required />
+          </label>
+          <label>Role
+            <select name="role">
+              <option value="viewer">Viewer</option>
+              <option value="analyst">Analyst</option>
+              <option value="super_admin">Super Admin</option>
+            </select>
+          </label>
+          <fieldset>
+            <legend>Analyst sections</legend>
             <label><input type="checkbox" name="sections" value="performance" /> Performance</label>
             <label><input type="checkbox" name="sections" value="behavioral" /> Behavioral</label>
             <label><input type="checkbox" name="sections" value="reports" /> Reports</label>
-        </fieldset>
-        <button type="submit">Create account</button>
-      </form>
-      <p class="hint">Viewers can only access saved reports. Analysts automatically get report access, plus the sections selected here.</p>
-    </section>
+          </fieldset>
+          <button type="submit">Create account</button>
+        </form>
+        <p class="muted" style="padding:0 0.5rem; font-size:0.85rem;">Viewers can only access saved reports. Analysts automatically get report access, plus the sections selected here.</p>
+      </section>
+    </div>
+  </main>
 
   <script>
     const params = new URLSearchParams(window.location.search);

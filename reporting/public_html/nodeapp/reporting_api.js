@@ -4,8 +4,8 @@ const Database = require('better-sqlite3');
 const session = require('express-session');
 const authRoutes = require('./routes/authRoutes');
 const pageRoutes = require('./routes/pageRoutes');
-const { DB_FILE, initializeAuthDb } = require('./lib/authDb');
-const { requireAuth, requireSection } = require('./middleware/auth');
+const { DB_FILE, initializeAuthDb, getDb, getReportComments, addReportComment, deleteUser } = require('./lib/authDb');
+const { requireAuth, requireSection, requireRole } = require('./middleware/auth');
 const { SECTIONS } = require('./lib/authDb');
 
 const app = express();
@@ -33,14 +33,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// GET /api/events - Retrieve all events
+// ── Events CRUD ──────────────────────────────────────────
+
 app.get('/api/events', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 100;
     const offset = parseInt(req.query.offset) || 0;
     const rows = db.prepare(`
-      SELECT * FROM events 
-      ORDER BY server_timestamp DESC 
+      SELECT * FROM events
+      ORDER BY server_timestamp DESC
       LIMIT ? OFFSET ?
     `).all(limit, offset);
     res.json(rows);
@@ -49,7 +50,6 @@ app.get('/api/events', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTION
   }
 });
 
-// GET /api/events/:id - Retrieve a specific event
 app.get('/api/events/:id', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const row = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
@@ -62,7 +62,6 @@ app.get('/api/events/:id', requireAuth, requireSection(SECTIONS.PERFORMANCE, SEC
   }
 });
 
-// POST /api/events - Add a new event
 app.post('/api/events', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const { event_type, url, title, session_id, user_agent } = req.body;
@@ -80,7 +79,6 @@ app.post('/api/events', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIO
   }
 });
 
-// PUT /api/events/:id - Update a specific event
 app.put('/api/events/:id', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const { event_type, url, title } = req.body;
@@ -89,7 +87,7 @@ app.put('/api/events/:id', requireAuth, requireSection(SECTIONS.PERFORMANCE, SEC
       return res.status(404).json({ error: 'Event not found' });
     }
     const stmt = db.prepare(`
-      UPDATE events 
+      UPDATE events
       SET event_type = ?, url = ?, title = ?
       WHERE id = ?
     `);
@@ -105,7 +103,6 @@ app.put('/api/events/:id', requireAuth, requireSection(SECTIONS.PERFORMANCE, SEC
   }
 });
 
-// DELETE /api/events/:id - Delete a specific event
 app.delete('/api/events/:id', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const existing = db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
@@ -119,16 +116,17 @@ app.delete('/api/events/:id', requireAuth, requireSection(SECTIONS.PERFORMANCE, 
   }
 });
 
-// GET /api/sessions - Retrieve all unique sessions
+// ── Sessions ─────────────────────────────────────────────
+
 app.get('/api/sessions', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const rows = db.prepare(`
-      SELECT 
+      SELECT
         session_id,
         COUNT(*) as event_count,
         MIN(server_timestamp) as first_seen,
         MAX(server_timestamp) as last_seen
-      FROM events 
+      FROM events
       WHERE session_id IS NOT NULL
       GROUP BY session_id
       ORDER BY last_seen DESC
@@ -140,11 +138,10 @@ app.get('/api/sessions', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req,
   }
 });
 
-// GET /api/sessions/:id - Retrieve events for a specific session
 app.get('/api/sessions/:id', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const rows = db.prepare(`
-      SELECT * FROM events 
+      SELECT * FROM events
       WHERE session_id = ?
       ORDER BY server_timestamp ASC
     `).all(req.params.id);
@@ -157,7 +154,6 @@ app.get('/api/sessions/:id', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (
   }
 });
 
-// DELETE /api/sessions/:id - Delete all events for a session
 app.delete('/api/sessions/:id', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const result = db.prepare('DELETE FROM events WHERE session_id = ?').run(req.params.id);
@@ -170,21 +166,21 @@ app.delete('/api/sessions/:id', requireAuth, requireSection(SECTIONS.BEHAVIORAL)
   }
 });
 
+// ── Stats Summary ────────────────────────────────────────
 
-// GET /api/stats/summary - Get overall statistics
 app.get('/api/stats/summary', requireAuth, requireSection(SECTIONS.PERFORMANCE), (req, res) => {
   try {
     const stats = {
       total_events: db.prepare('SELECT COUNT(*) as count FROM events').get().count,
       unique_sessions: db.prepare('SELECT COUNT(DISTINCT session_id) as count FROM events').get().count,
       event_types: db.prepare(`
-        SELECT event_type, COUNT(*) as count 
-        FROM events 
+        SELECT event_type, COUNT(*) as count
+        FROM events
         GROUP BY event_type
       `).all(),
       recent_events: db.prepare(`
-        SELECT * FROM events 
-        ORDER BY server_timestamp DESC 
+        SELECT * FROM events
+        ORDER BY server_timestamp DESC
         LIMIT 10
       `).all()
     };
@@ -194,14 +190,346 @@ app.get('/api/stats/summary', requireAuth, requireSection(SECTIONS.PERFORMANCE),
   }
 });
 
-// Serve static files
+// ── Performance Stats ────────────────────────────────────
+
+app.get('/api/stats/performance', requireAuth, requireSection(SECTIONS.PERFORMANCE), (req, res) => {
+  try {
+    const vitals = db.prepare(`
+      SELECT
+        COUNT(*) as sample_count,
+        ROUND(AVG(ttfb), 2) as avg_ttfb,
+        ROUND(AVG(lcp), 2) as avg_lcp,
+        ROUND(AVG(cls), 4) as avg_cls,
+        ROUND(AVG(inp), 2) as avg_inp,
+        ROUND(AVG(time_on_page), 2) as avg_time_on_page,
+        ROUND(MIN(ttfb), 2) as min_ttfb,
+        ROUND(MAX(ttfb), 2) as max_ttfb,
+        ROUND(MIN(lcp), 2) as min_lcp,
+        ROUND(MAX(lcp), 2) as max_lcp
+      FROM events
+      WHERE ttfb IS NOT NULL OR lcp IS NOT NULL
+    `).get();
+
+    const byPage = db.prepare(`
+      SELECT
+        url,
+        COUNT(*) as hits,
+        ROUND(AVG(ttfb), 2) as avg_ttfb,
+        ROUND(AVG(lcp), 2) as avg_lcp,
+        ROUND(AVG(cls), 4) as avg_cls
+      FROM events
+      WHERE event_type = 'page_exit' OR event_type = 'pageview'
+      GROUP BY url
+      ORDER BY hits DESC
+      LIMIT 20
+    `).all();
+
+    const volumeByHour = db.prepare(`
+      SELECT
+        strftime('%Y-%m-%d %H:00', server_timestamp) as hour_bucket,
+        COUNT(*) as count
+      FROM events
+      WHERE server_timestamp IS NOT NULL
+      GROUP BY hour_bucket
+      ORDER BY hour_bucket ASC
+      LIMIT 168
+    `).all();
+
+    res.json({ vitals, byPage, volumeByHour });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Behavioral Stats ─────────────────────────────────────
+
+app.get('/api/stats/behavioral', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
+  try {
+    const sessions = db.prepare(`
+      SELECT
+        session_id,
+        COUNT(*) as event_count,
+        MIN(server_timestamp) as first_seen,
+        MAX(server_timestamp) as last_seen,
+        GROUP_CONCAT(DISTINCT event_type) as event_types,
+        MAX(time_on_page) as max_time_on_page
+      FROM events
+      WHERE session_id IS NOT NULL
+      GROUP BY session_id
+      ORDER BY last_seen DESC
+      LIMIT 50
+    `).all();
+
+    const topPages = db.prepare(`
+      SELECT
+        url,
+        COUNT(*) as pageviews,
+        COUNT(DISTINCT session_id) as unique_sessions,
+        ROUND(AVG(time_on_page), 1) as avg_time_on_page
+      FROM events
+      WHERE event_type IN ('pageview', 'page_exit')
+      GROUP BY url
+      ORDER BY pageviews DESC
+      LIMIT 20
+    `).all();
+
+    const eventTypesBySession = db.prepare(`
+      SELECT
+        event_type,
+        COUNT(DISTINCT session_id) as session_count,
+        COUNT(*) as total_count
+      FROM events
+      WHERE session_id IS NOT NULL
+      GROUP BY event_type
+      ORDER BY total_count DESC
+    `).all();
+
+    res.json({ sessions, topPages, eventTypesBySession });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Error Stats ──────────────────────────────────────────
+
+app.get('/api/stats/errors', requireAuth, requireSection(SECTIONS.PERFORMANCE), (req, res) => {
+  try {
+    const errorEvents = db.prepare(`
+      SELECT id, url, title, session_id, server_timestamp, raw_payload
+      FROM events
+      WHERE event_type = 'error'
+      ORDER BY server_timestamp DESC
+      LIMIT 200
+    `).all();
+
+    const errorsByPage = db.prepare(`
+      SELECT url, COUNT(*) as error_count
+      FROM events
+      WHERE event_type = 'error'
+      GROUP BY url
+      ORDER BY error_count DESC
+      LIMIT 20
+    `).all();
+
+    const errorsByDay = db.prepare(`
+      SELECT
+        strftime('%Y-%m-%d', server_timestamp) as day,
+        COUNT(*) as count
+      FROM events
+      WHERE event_type = 'error' AND server_timestamp IS NOT NULL
+      GROUP BY day
+      ORDER BY day ASC
+      LIMIT 90
+    `).all();
+
+    const totalErrors = db.prepare(`
+      SELECT COUNT(*) as count FROM events WHERE event_type = 'error'
+    `).get().count;
+
+    const totalEvents = db.prepare(`
+      SELECT COUNT(*) as count FROM events
+    `).get().count;
+
+    res.json({
+      errors: errorEvents,
+      errorsByPage,
+      errorsByDay,
+      totalErrors,
+      totalEvents,
+      errorRate: totalEvents > 0 ? (totalErrors / totalEvents * 100).toFixed(2) : 0
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Report Comments ──────────────────────────────────────
+
+app.get('/api/reports/:slug/comments', requireAuth, (req, res) => {
+  const authDb = getDb();
+  try {
+    const comments = getReportComments(authDb, req.params.slug);
+    res.json({ comments });
+  } finally {
+    authDb.close();
+  }
+});
+
+app.post('/api/reports/:slug/comments', requireAuth, (req, res) => {
+  const user = req.session.user;
+  if (user.role === 'viewer') {
+    return res.status(403).json({ error: 'Viewers cannot add comments.' });
+  }
+
+  const { comment_text } = req.body;
+  if (!comment_text || !comment_text.trim()) {
+    return res.status(400).json({ error: 'Comment text is required.' });
+  }
+
+  const authDb = getDb();
+  try {
+    const id = addReportComment(authDb, {
+      reportSlug: req.params.slug,
+      userId: user.id,
+      username: user.displayName || user.username,
+      commentText: comment_text.trim()
+    });
+    res.status(201).json({ id });
+  } finally {
+    authDb.close();
+  }
+});
+
+// ── Admin: Delete User ───────────────────────────────────
+
+app.delete('/api/auth/users/:id', requireAuth, requireRole('super_admin'), (req, res) => {
+  const authDb = getDb();
+  try {
+    const userId = parseInt(req.params.id);
+    if (userId === req.session.user.id) {
+      return res.status(400).json({ error: 'Cannot delete yourself.' });
+    }
+    const result = deleteUser(authDb, userId);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.json({ message: 'User deleted.' });
+  } finally {
+    authDb.close();
+  }
+});
+
+// ── PDF Export ────────────────────────────────────────────
+
+app.get('/api/export/:slug', requireAuth, (req, res) => {
+  const PDFDocument = require('pdfkit');
+  const slug = req.params.slug;
+  const authDb = getDb();
+
+  try {
+    const comments = getReportComments(authDb, slug);
+
+    let title, statsData;
+    if (slug === 'performance-snapshot') {
+      title = 'Performance Snapshot';
+      const vitals = db.prepare(`
+        SELECT
+          COUNT(*) as sample_count,
+          ROUND(AVG(ttfb), 2) as avg_ttfb,
+          ROUND(AVG(lcp), 2) as avg_lcp,
+          ROUND(AVG(cls), 4) as avg_cls,
+          ROUND(AVG(inp), 2) as avg_inp
+        FROM events WHERE ttfb IS NOT NULL OR lcp IS NOT NULL
+      `).get();
+      const byPage = db.prepare(`
+        SELECT url, COUNT(*) as hits, ROUND(AVG(ttfb), 2) as avg_ttfb, ROUND(AVG(lcp), 2) as avg_lcp
+        FROM events WHERE event_type IN ('pageview', 'page_exit')
+        GROUP BY url ORDER BY hits DESC LIMIT 10
+      `).all();
+      statsData = { vitals, byPage };
+
+    } else if (slug === 'behavior-performance-overview') {
+      title = 'Behavior + Performance Overview';
+      const topPages = db.prepare(`
+        SELECT url, COUNT(*) as pageviews, COUNT(DISTINCT session_id) as unique_sessions
+        FROM events WHERE event_type IN ('pageview', 'page_exit')
+        GROUP BY url ORDER BY pageviews DESC LIMIT 10
+      `).all();
+      const sessionCount = db.prepare('SELECT COUNT(DISTINCT session_id) as count FROM events').get().count;
+      statsData = { sessionCount, topPages };
+
+    } else if (slug === 'error-analysis') {
+      title = 'Error Analysis';
+      const totalErrors = db.prepare("SELECT COUNT(*) as count FROM events WHERE event_type = 'error'").get().count;
+      const totalEvents = db.prepare('SELECT COUNT(*) as count FROM events').get().count;
+      const errorsByPage = db.prepare(`
+        SELECT url, COUNT(*) as error_count FROM events
+        WHERE event_type = 'error' GROUP BY url ORDER BY error_count DESC LIMIT 10
+      `).all();
+      statsData = { totalErrors, totalEvents, errorRate: totalEvents > 0 ? (totalErrors / totalEvents * 100).toFixed(2) + '%' : '0%', errorsByPage };
+
+    } else {
+      return res.status(404).json({ error: 'Report not found.' });
+    }
+
+    const doc = new PDFDocument({ margin: 50 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${slug}.pdf"`);
+    doc.pipe(res);
+
+    // Title
+    doc.fontSize(20).text(title, { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(10).fillColor('#667085').text(`Generated: ${new Date().toISOString()}`, { align: 'center' });
+    doc.moveDown(1);
+
+    // Stats
+    doc.fontSize(14).fillColor('#1a3a4a').text('Summary Statistics');
+    doc.moveDown(0.5);
+    doc.fontSize(10).fillColor('#333');
+
+    for (const [key, value] of Object.entries(statsData)) {
+      if (Array.isArray(value)) {
+        doc.moveDown(0.5);
+        doc.fontSize(12).fillColor('#2c5f7c').text(key);
+        doc.fontSize(9).fillColor('#333');
+        value.forEach((row) => {
+          const parts = Object.entries(row).map(([k, v]) => `${k}: ${v}`).join('  |  ');
+          doc.text(parts);
+        });
+      } else if (typeof value === 'object' && value !== null) {
+        doc.moveDown(0.5);
+        doc.fontSize(12).fillColor('#2c5f7c').text(key);
+        doc.fontSize(10).fillColor('#333');
+        for (const [k, v] of Object.entries(value)) {
+          doc.text(`${k}: ${v ?? 'N/A'}`);
+        }
+      } else {
+        doc.text(`${key}: ${value}`);
+      }
+    }
+
+    // Comments
+    if (comments.length > 0) {
+      doc.moveDown(1);
+      doc.fontSize(14).fillColor('#1a3a4a').text('Analyst Comments');
+      doc.moveDown(0.5);
+      comments.forEach((c) => {
+        doc.fontSize(9).fillColor('#667085').text(`${c.username} — ${c.created_at}`);
+        doc.fontSize(10).fillColor('#333').text(c.comment_text);
+        doc.moveDown(0.5);
+      });
+    }
+
+    doc.end();
+  } catch (err) {
+    authDb.close();
+    res.status(500).json({ error: err.message });
+    return;
+  }
+  authDb.close();
+});
+
+// ── Static Files ─────────────────────────────────────────
+
 app.use(express.static(path.join(__dirname, '..')));
 
-// Simple MVC web routes for login + protected pages
+// ── MVC Routes ───────────────────────────────────────────
+
 app.use(authRoutes);
 app.use(pageRoutes);
 
-// Graceful shutdown
+// ── 404 Catch-all ────────────────────────────────────────
+
+app.use((req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  res.status(404).sendFile(path.join(__dirname, 'views', '404.html'));
+});
+
+// ── Graceful Shutdown ────────────────────────────────────
+
 process.on('SIGTERM', () => {
   db.close();
   process.exit(0);

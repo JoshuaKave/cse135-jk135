@@ -11,6 +11,18 @@ function reports(req, res) {
   return res.sendFile(path.join(viewsBase, 'reports.html'));
 }
 
+function reportPerformance(req, res) {
+  return res.sendFile(path.join(viewsBase, 'report-performance.html'));
+}
+
+function reportBehavioral(req, res) {
+  return res.sendFile(path.join(viewsBase, 'report-behavioral.html'));
+}
+
+function reportErrors(req, res) {
+  return res.sendFile(path.join(viewsBase, 'report-errors.html'));
+}
+
 function getDashboardConfig(req, res) {
   const user = req.session.user;
   const sections = Array.isArray(user.sections) ? user.sections : [];
@@ -46,6 +58,9 @@ function getReportsData(req, res) {
 module.exports = {
   dashboard,
   reports,
+  reportPerformance,
+  reportBehavioral,
+  reportErrors,
   getDashboardConfig,
   getReportsData
 };

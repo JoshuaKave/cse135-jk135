@@ -91,6 +91,13 @@ function seedDefaultUsers(db) {
       JSON.stringify([SECTIONS.BEHAVIORAL, SECTIONS.PERFORMANCE]),
       1
     );
+    insertReport.run(
+      'Error Analysis',
+      'error-analysis',
+      'JavaScript errors, promise rejections, and resource failures.',
+      JSON.stringify([SECTIONS.PERFORMANCE]),
+      1
+    );
   });
 
   seed();
@@ -124,6 +131,16 @@ function initializeAuthDb(db) {
       sections_json TEXT NOT NULL,
       is_static INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS auth_report_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      report_slug TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
+      username TEXT NOT NULL,
+      comment_text TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES auth_users(id) ON DELETE CASCADE
     );
   `);
 
@@ -243,6 +260,27 @@ function getSavedReports(db) {
   }));
 }
 
+function deleteUser(db, userId) {
+  return db.prepare('DELETE FROM auth_users WHERE id = ?').run(userId);
+}
+
+function getReportComments(db, reportSlug) {
+  return db.prepare(`
+    SELECT id, report_slug, user_id, username, comment_text, created_at
+    FROM auth_report_comments
+    WHERE report_slug = ?
+    ORDER BY created_at ASC
+  `).all(reportSlug);
+}
+
+function addReportComment(db, { reportSlug, userId, username, commentText }) {
+  const info = db.prepare(`
+    INSERT INTO auth_report_comments (report_slug, user_id, username, comment_text)
+    VALUES (?, ?, ?, ?)
+  `).run(reportSlug, userId, username, commentText);
+  return info.lastInsertRowid;
+}
+
 module.exports = {
   DB_FILE,
   ROLES,
@@ -253,6 +291,9 @@ module.exports = {
   findUserById,
   listUsers,
   createUser,
+  deleteUser,
   getSavedReports,
+  getReportComments,
+  addReportComment,
   normalizePermissionsForRole
 };

@@ -1,3 +1,11 @@
+const path = require('path');
+
+const viewsBase = path.join(__dirname, '..', 'views');
+
+function isApiRequest(req) {
+  return req.path.startsWith('/api/') || req.accepts('html', 'json') === 'json';
+}
+
 function hasRole(user, roles) {
   if (!user) {
     return false;
@@ -31,7 +39,10 @@ function requireRole(...roles) {
       return next();
     }
 
-    return res.status(403).json({ error: 'Insufficient role privileges.' });
+    if (isApiRequest(req)) {
+      return res.status(403).json({ error: 'Insufficient role privileges.' });
+    }
+    return res.status(403).sendFile(path.join(viewsBase, '403.html'));
   };
 }
 
@@ -42,7 +53,10 @@ function requireSection(...sections) {
       return next();
     }
 
-    return res.status(403).json({ error: 'Section access denied.' });
+    if (isApiRequest(req)) {
+      return res.status(403).json({ error: 'Section access denied.' });
+    }
+    return res.status(403).sendFile(path.join(viewsBase, '403.html'));
   };
 }
 
