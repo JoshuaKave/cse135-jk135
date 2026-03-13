@@ -47,16 +47,11 @@
     </div>
 
     <!-- Charts -->
-    <div class="grid-2">
+    <div>
       <article class="card">
         <h3>Timing Metrics (ms)</h3>
         <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">TTFB, LCP, and INP — lower is better. Measures server response, visual load, and interactivity.</p>
         <div id="timingChart"></div>
-      </article>
-      <article class="card">
-        <h3>Traffic Volume by Hour</h3>
-        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Event volume over time — reveals peak hours and usage trends</p>
-        <div id="volumeChart" class="chart-container"></div>
       </article>
     </div>
 
@@ -162,24 +157,6 @@
             '<td>' + (p.avg_lcp != null ? p.avg_lcp + ' ms' : '—') + '</td>' +
             '<td>' + (p.avg_cls != null ? p.avg_cls : '—') + '</td></tr>';
         }).join('');
-
-        // Volume by hour — ZingChart (complex spline area time-series)
-        if (typeof zingchart !== 'undefined' && data.volumeByHour.length > 0) {
-          try {
-            zingchart.render({
-              id: 'volumeChart',
-              data: {
-                ...ZC.g, type: 'area',
-                scaleX: { ...ZC.sx, labels: data.volumeByHour.map(function(r) { var p = r.hour_bucket.split(' '); return p[1] || r.hour_bucket; }) },
-                scaleY: ZC.sy,
-                tooltip: ZC.tt,
-                plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { visible: false }, alphaArea: 0.15 },
-                series: [{ values: data.volumeByHour.map(function(r) { return r.count; }), lineColor: '#3a8a9e', backgroundColor: '#3a8a9e' }]
-              },
-              height: 340, width: '100%'
-            });
-          } catch (e) { console.warn('Volume chart render failed:', e); }
-        }
 
         // Per-page comparison — ZingChart (multi-series grouped bar)
         if (typeof zingchart !== 'undefined' && data.byPage.length > 0) {
