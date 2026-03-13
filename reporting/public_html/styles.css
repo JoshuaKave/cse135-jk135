@@ -674,30 +674,162 @@ td.mono {
   color: var(--ocean);
 }
 
-/* ── ZingGrid Overrides ───────────────────────────────── */
+/* ── CSS-Only Horizontal Bar Charts ───────────────────── */
 
-zing-grid {
-  --zg-body-font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --zg-head-cell-background: var(--sand-light);
-  --zg-head-cell-color: var(--ocean);
-  --zg-head-cell-font-size: 0.72rem;
-  --zg-head-cell-font-weight: 700;
-  --zg-head-cell-text-transform: uppercase;
-  --zg-head-cell-letter-spacing: 0.04em;
-  --zg-cell-color: var(--slate);
-  --zg-cell-font-size: 0.825rem;
-  --zg-cell-padding: 0.6rem 0.75rem;
-  --zg-row-hover-background: rgba(58, 138, 158, 0.04);
-  --zg-row-border-color: rgba(136, 183, 196, 0.12);
-  --zg-pager-background: var(--sand-light);
-  --zg-pager-color: var(--slate);
-  --zg-search-background: var(--white);
-  --zg-search-color: var(--ocean);
-  --zg-search-border-color: rgba(136, 183, 196, 0.4);
-  --zg-border-color: rgba(136, 183, 196, 0.15);
-  border: none !important;
-  box-shadow: none !important;
-  font-family: inherit;
+.css-hbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.css-hbar-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 140px) 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.css-hbar-label {
+  color: var(--slate);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+}
+
+.css-hbar-track {
+  height: 22px;
+  background: rgba(136, 183, 196, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.css-hbar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--teal);
+  min-width: 2px;
+  transition: width 0.6s var(--ease-out-expo);
+}
+
+.css-hbar-fill.coral { background: var(--coral); }
+.css-hbar-fill.ocean { background: var(--ocean-blue); }
+
+.css-hbar-val {
+  color: var(--mist);
+  font-size: 0.72rem;
+  font-weight: 600;
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── CSS-Only Donut Charts ────────────────────────────── */
+
+.css-donut-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1.5rem 0;
+  flex-wrap: wrap;
+}
+
+.css-donut {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.css-donut::after {
+  content: '';
+  position: absolute;
+  top: 25%;
+  left: 25%;
+  width: 50%;
+  height: 50%;
+  background: var(--white);
+  border-radius: 50%;
+}
+
+.css-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.css-donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--slate);
+}
+
+.css-donut-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.css-donut-pct {
+  font-weight: 700;
+  color: var(--ocean);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ── CSS-Only Vertical Bar Charts ─────────────────────── */
+
+.css-vbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem 1rem 0.5rem;
+  height: 260px;
+}
+
+.css-vbar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  max-width: 100px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.css-vbar-bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  transition: height 0.6s var(--ease-out-expo);
+}
+
+.css-vbar-val {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--deep-ocean);
+  font-variant-numeric: tabular-nums;
+}
+
+.css-vbar-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--mist);
 }
 
 /* ── Charts ───────────────────────────────────────────── */
@@ -772,6 +904,14 @@ zing-grid {
   color: var(--slate);
   margin-bottom: 2rem;
   font-weight: 500;
+}
+
+.error-detail {
+  color: var(--slate);
+  max-width: 400px;
+  margin: 0 auto 2rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 /* ── Noscript ─────────────────────────────────────────── */

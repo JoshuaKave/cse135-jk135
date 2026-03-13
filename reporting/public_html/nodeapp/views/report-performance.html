@@ -49,12 +49,12 @@
     <!-- Charts -->
     <div class="grid-2">
       <article class="card">
-        <h3><span class="card-icon" aria-hidden="true">&#x23F1;</span> Timing Metrics (ms)</h3>
+        <h3>Timing Metrics (ms)</h3>
         <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">TTFB, LCP, and INP — lower is better. Measures server response, visual load, and interactivity.</p>
-        <div id="timingChart" class="chart-container"></div>
+        <div id="timingChart"></div>
       </article>
       <article class="card">
-        <h3><span class="card-icon" aria-hidden="true">&#x1F4C8;</span> Traffic Volume by Hour</h3>
+        <h3>Traffic Volume by Hour</h3>
         <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Event volume over time — reveals peak hours and usage trends</p>
         <div id="volumeChart" class="chart-container"></div>
       </article>
@@ -62,14 +62,14 @@
 
     <!-- Per-Page Performance -->
     <article class="card">
-      <h3><span class="card-icon" aria-hidden="true">&#x1F310;</span> Performance by Page</h3>
+      <h3>Performance by Page</h3>
       <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Compare load performance across pages — identify which pages need optimization</p>
       <div id="pageCompareChart" class="chart-container"></div>
     </article>
 
     <!-- Data Table -->
     <article class="card">
-      <h3><span class="card-icon" aria-hidden="true">&#x1F4CB;</span> Detailed Page Metrics</h3>
+      <h3>Detailed Page Metrics</h3>
       <div class="table-wrap">
         <table id="pageTable" aria-label="Per-page performance metrics">
           <thead>
@@ -88,7 +88,7 @@
 
     <!-- Analyst Comments -->
     <article class="card comments-section" aria-label="Analyst comments">
-      <h3><span class="card-icon" aria-hidden="true">&#x1F4AC;</span> Analyst Comments</h3>
+      <h3>Analyst Comments</h3>
       <div id="commentsList"></div>
       <div id="commentForm" class="mt-1">
         <label for="commentText" class="sr-only">Add a comment</label>
@@ -100,8 +100,8 @@
   </main>
 
   <script>
-    const SLUG = 'performance-snapshot';
-    const T = {
+    var SLUG = 'performance-snapshot';
+    var ZC = {
       g: { backgroundColor: 'transparent', borderWidth: 0, plotarea: { margin: '40 24 56 56' } },
       tt: { backgroundColor: '#0f2b38', fontColor: '#fff', fontSize: '12px', fontFamily: 'system-ui', borderRadius: '6px', padding: '8px 12px', shadow: false },
       sx: { lineColor: 'rgba(136,183,196,0.3)', tick: { lineColor: 'rgba(136,183,196,0.3)' }, item: { fontColor: '#4a5568', fontSize: '10px' }, guide: { visible: false } },
@@ -110,7 +110,7 @@
     };
 
     function kpi(label, value, unit, variant) {
-      const display = value != null ? value : '—';
+      var display = value != null ? value : '—';
       return '<div class="kpi-card' + (variant ? ' kpi-' + variant : '') + '">' +
         '<div class="kpi-label">' + label + '</div>' +
         '<div class="kpi-value">' + display + '<span class="kpi-unit">' + unit + '</span></div></div>';
@@ -118,12 +118,12 @@
 
     async function load() {
       try {
-        const [perfRes, configRes] = await Promise.all([
+        var [perfRes, configRes] = await Promise.all([
           fetch('/api/stats/performance'),
           fetch('/api/dashboard/config')
         ]);
-        const data = await perfRes.json();
-        const config = await configRes.json();
+        var data = await perfRes.json();
+        var config = await configRes.json();
 
         if (config.user.role === 'viewer') document.getElementById('commentForm').classList.add('hidden');
 
@@ -137,53 +137,52 @@
           kpi('Samples', v.sample_count, '')
         ].join('');
 
-        // Timing chart — ONLY ms-based metrics on same axis (CLS excluded: different unit)
-        zingchart.render({
-          id: 'timingChart',
-          data: {
-            ...T.g, type: 'bar',
-            scaleX: { ...T.sx, labels: ['TTFB', 'LCP', 'INP'] },
-            scaleY: { ...T.sy, label: { text: 'Milliseconds', fontColor: '#94a3b8', fontSize: '10px' } },
-            tooltip: { ...T.tt, text: '%t: %v ms' },
-            plot: { ...T.anim, barWidth: '55%', borderRadius: '4px' },
-            series: [
-              { values: [v.avg_ttfb || 0], text: 'TTFB', backgroundColor: '#2c5f7c' },
-              { values: [v.avg_lcp || 0], text: 'LCP', backgroundColor: '#3a8a9e' },
-              { values: [v.avg_inp || 0], text: 'INP', backgroundColor: '#88b7c4' }
-            ]
-          },
-          height: 340, width: '100%'
-        });
+        // Timing metrics — CSS vertical bars (only 3 simple values)
+        var metrics = [
+          { label: 'TTFB', value: v.avg_ttfb || 0, color: '#2c5f7c' },
+          { label: 'LCP', value: v.avg_lcp || 0, color: '#3a8a9e' },
+          { label: 'INP', value: v.avg_inp || 0, color: '#88b7c4' }
+        ];
+        var maxMs = Math.max.apply(null, metrics.map(function(m) { return m.value; }));
+        document.getElementById('timingChart').innerHTML =
+          '<div class="css-vbar" role="img" aria-label="Timing metrics bar chart">' +
+          metrics.map(function(m) {
+            var pct = maxMs > 0 ? (m.value / maxMs * 100) : 0;
+            return '<div class="css-vbar-col">' +
+              '<span class="css-vbar-val">' + m.value + ' ms</span>' +
+              '<div class="css-vbar-bar" style="height:' + Math.max(pct, 2) + '%;background:' + m.color + '"></div>' +
+              '<span class="css-vbar-label">' + m.label + '</span></div>';
+          }).join('') + '</div>';
 
-        // Volume by hour
+        // Volume by hour — ZingChart (complex spline area time-series)
         if (data.volumeByHour.length > 0) {
           zingchart.render({
             id: 'volumeChart',
             data: {
-              ...T.g, type: 'area',
-              scaleX: { ...T.sx, labels: data.volumeByHour.map(function(r) { var p = r.hour_bucket.split(' '); return p[1] || r.hour_bucket; }) },
-              scaleY: T.sy,
-              tooltip: T.tt,
-              plot: { ...T.anim, aspect: 'spline', lineWidth: '2px', marker: { visible: false }, alphaArea: 0.15 },
+              ...ZC.g, type: 'area',
+              scaleX: { ...ZC.sx, labels: data.volumeByHour.map(function(r) { var p = r.hour_bucket.split(' '); return p[1] || r.hour_bucket; }) },
+              scaleY: ZC.sy,
+              tooltip: ZC.tt,
+              plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { visible: false }, alphaArea: 0.15 },
               series: [{ values: data.volumeByHour.map(function(r) { return r.count; }), lineColor: '#3a8a9e', backgroundColor: '#3a8a9e' }]
             },
             height: 340, width: '100%'
           });
         }
 
-        // Per-page comparison
+        // Per-page comparison — ZingChart (multi-series grouped bar)
         if (data.byPage.length > 0) {
           var pages = data.byPage.slice(0, 8);
           var labels = pages.map(function(p) { try { return new URL(p.url).pathname; } catch(e) { return p.url; } });
           zingchart.render({
             id: 'pageCompareChart',
             data: {
-              ...T.g, type: 'bar',
-              scaleX: { ...T.sx, labels: labels, item: { fontColor: '#4a5568', fontSize: '10px', maxChars: 20 } },
-              scaleY: { ...T.sy, label: { text: 'ms', fontColor: '#94a3b8', fontSize: '10px' } },
-              tooltip: { ...T.tt, text: '%t: %v ms' },
+              ...ZC.g, type: 'bar',
+              scaleX: { ...ZC.sx, labels: labels, item: { fontColor: '#4a5568', fontSize: '10px', maxChars: 20 } },
+              scaleY: { ...ZC.sy, label: { text: 'ms', fontColor: '#94a3b8', fontSize: '10px' } },
+              tooltip: { ...ZC.tt, text: '%t: %v ms' },
               legend: { layout: 'float', backgroundColor: 'transparent', borderWidth: 0, item: { fontColor: '#4a5568', fontSize: '10px' }, marker: { borderRadius: '3px' } },
-              plot: { ...T.anim, barWidth: '70%', borderRadius: '3px' },
+              plot: { ...ZC.anim, barWidth: '70%', borderRadius: '3px' },
               series: [
                 { values: pages.map(function(p) { return p.avg_ttfb || 0; }), text: 'TTFB', backgroundColor: '#2c5f7c' },
                 { values: pages.map(function(p) { return p.avg_lcp || 0; }), text: 'LCP', backgroundColor: '#3a8a9e' }

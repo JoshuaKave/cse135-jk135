@@ -45,11 +45,6 @@
       'error-analysis': '/reports/errors'
     };
 
-    const REPORT_ICONS = {
-      'performance-snapshot': '&#x26A1;',
-      'behavior-performance-overview': '&#x1F465;',
-      'error-analysis': '&#x1F6A8;'
-    };
 
     async function loadReports() {
       const res = await fetch('/api/reports');
@@ -68,13 +63,12 @@
 
       list.innerHTML = reports.map(report => {
         const route = REPORT_ROUTES[report.slug];
-        const icon = REPORT_ICONS[report.slug] || '&#x1F4C4;';
         const tags = report.sections.map(s => `<span class="section-tag">${s}</span>`).join('');
 
         return route
           ? `<a href="${route}" class="card-link" role="listitem">
               <article class="card report-card">
-                <h3><span class="card-icon" aria-hidden="true">${icon}</span> ${report.name}</h3>
+                <h3>${report.name}</h3>
                 <p class="report-desc">${report.description || 'No description.'}</p>
                 <div>${tags}</div>
               </article>
