@@ -215,26 +215,6 @@
           kpi('Pages Tracked', data.topPages.length, '')
         ].join('');
 
-        // Event types — ZingChart (multi-series grouped bar: total vs sessions)
-        if (data.eventTypesBySession.length > 0) {
-          zingchart.render({
-            id: 'eventTypesChart',
-            data: {
-              ...ZC.g, type: 'bar',
-              scaleX: { ...ZC.sx, labels: data.eventTypesBySession.map(function(r) { return r.event_type; }) },
-              scaleY: ZC.sy,
-              tooltip: ZC.tt,
-              legend: { layout: 'float', backgroundColor: 'transparent', borderWidth: 0, item: { fontColor: '#4a5568', fontSize: '10px' }, marker: { borderRadius: '3px' } },
-              plot: { ...ZC.anim, barWidth: '60%', borderRadius: '3px' },
-              series: [
-                { values: data.eventTypesBySession.map(function(r) { return r.total_count; }), text: 'Total Events', backgroundColor: '#2c5f7c' },
-                { values: data.eventTypesBySession.map(function(r) { return r.session_count; }), text: 'Sessions', backgroundColor: '#88b7c4' }
-              ]
-            },
-            height: 340, width: '100%'
-          });
-        }
-
         // Device breakdown — CSS donut (3-4 categories, proportional)
         if (tech.viewportBreakdown.length > 0) {
           document.getElementById('deviceChart').innerHTML = cssDonut(
@@ -268,32 +248,6 @@
           );
         }
 
-        // Sessions over time — ZingChart (complex spline area time-series)
-        if (data.sessions.length > 0) {
-          var dayMap = {};
-          data.sessions.forEach(function(s) {
-            if (s.first_seen) {
-              var day = s.first_seen.substring(0, 10);
-              dayMap[day] = (dayMap[day] || 0) + 1;
-            }
-          });
-          var days = Object.keys(dayMap).sort();
-          if (days.length > 0) {
-            zingchart.render({
-              id: 'sessionsTimeChart',
-              data: {
-                ...ZC.g, type: 'area',
-                scaleX: { ...ZC.sx, labels: days.map(function(d) { return d.substring(5); }) },
-                scaleY: ZC.sy,
-                tooltip: { ...ZC.tt, text: '%v sessions' },
-                plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { size: 3, backgroundColor: '#3a8a9e', borderColor: '#3a8a9e' }, alphaArea: 0.15 },
-                series: [{ values: days.map(function(d) { return dayMap[d]; }), lineColor: '#3a8a9e', backgroundColor: '#3a8a9e' }]
-              },
-              height: 300, width: '100%'
-            });
-          }
-        }
-
         // Top pages table
         document.querySelector('#pagesTable tbody').innerHTML = data.topPages.map(function(p) {
           return '<tr><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + p.url + '</td><td>' + p.pageviews + '</td><td>' + p.unique_sessions + '</td><td>' + (p.avg_time_on_page != null ? p.avg_time_on_page + 's' : '—') + '</td></tr>';
@@ -303,6 +257,56 @@
         document.querySelector('#sessionsTable tbody').innerHTML = data.sessions.slice(0, 25).map(function(s) {
           return '<tr><td class="mono">' + (s.session_id ? s.session_id.substring(0, 12) : '—') + '</td><td>' + s.event_count + '</td><td>' + (s.event_types || '') + '</td><td style="white-space:nowrap;font-size:0.78rem;">' + (s.first_seen || '') + '</td><td style="white-space:nowrap;font-size:0.78rem;">' + (s.last_seen || '') + '</td></tr>';
         }).join('');
+
+        // Event types — ZingChart (multi-series grouped bar: total vs sessions)
+        if (typeof zingchart !== 'undefined' && data.eventTypesBySession.length > 0) {
+          try {
+            zingchart.render({
+              id: 'eventTypesChart',
+              data: {
+                ...ZC.g, type: 'bar',
+                scaleX: { ...ZC.sx, labels: data.eventTypesBySession.map(function(r) { return r.event_type; }) },
+                scaleY: ZC.sy,
+                tooltip: ZC.tt,
+                legend: { layout: 'float', backgroundColor: 'transparent', borderWidth: 0, item: { fontColor: '#4a5568', fontSize: '10px' }, marker: { borderRadius: '3px' } },
+                plot: { ...ZC.anim, barWidth: '60%', borderRadius: '3px' },
+                series: [
+                  { values: data.eventTypesBySession.map(function(r) { return r.total_count; }), text: 'Total Events', backgroundColor: '#2c5f7c' },
+                  { values: data.eventTypesBySession.map(function(r) { return r.session_count; }), text: 'Sessions', backgroundColor: '#88b7c4' }
+                ]
+              },
+              height: 340, width: '100%'
+            });
+          } catch (e) { console.warn('Event types chart render failed:', e); }
+        }
+
+        // Sessions over time — ZingChart (complex spline area time-series)
+        if (typeof zingchart !== 'undefined' && data.sessions.length > 0) {
+          try {
+            var dayMap = {};
+            data.sessions.forEach(function(s) {
+              if (s.first_seen) {
+                var day = s.first_seen.substring(0, 10);
+                dayMap[day] = (dayMap[day] || 0) + 1;
+              }
+            });
+            var days = Object.keys(dayMap).sort();
+            if (days.length > 0) {
+              zingchart.render({
+                id: 'sessionsTimeChart',
+                data: {
+                  ...ZC.g, type: 'area',
+                  scaleX: { ...ZC.sx, labels: days.map(function(d) { return d.substring(5); }) },
+                  scaleY: ZC.sy,
+                  tooltip: { ...ZC.tt, text: '%v sessions' },
+                  plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { size: 3, backgroundColor: '#3a8a9e', borderColor: '#3a8a9e' }, alphaArea: 0.15 },
+                  series: [{ values: days.map(function(d) { return dayMap[d]; }), lineColor: '#3a8a9e', backgroundColor: '#3a8a9e' }]
+                },
+                height: 300, width: '100%'
+              });
+            }
+          } catch (e) { console.warn('Sessions chart render failed:', e); }
+        }
 
         loadComments();
       } catch (err) { console.error('Behavioral load failed:', err); }
@@ -325,7 +329,7 @@
       loadComments();
     }
 
-    load();
+    document.addEventListener('DOMContentLoaded', load);
   </script>
 </body>
 </html>

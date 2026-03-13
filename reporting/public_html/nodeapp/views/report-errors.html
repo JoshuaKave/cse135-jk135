@@ -134,22 +134,6 @@
           kpi('Error Rate', data.errorRate, '%', data.errorRate > 5 ? 'coral' : 'teal')
         ].join('');
 
-        // Error trend — ZingChart (complex spline area time-series)
-        if (data.errorsByDay.length > 0) {
-          zingchart.render({
-            id: 'errorsTimeChart',
-            data: {
-              ...ZC.g, type: 'area',
-              scaleX: { ...ZC.sx, labels: data.errorsByDay.map(function(r) { return r.day.substring(5); }) },
-              scaleY: ZC.sy,
-              tooltip: ZC.tt,
-              plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { size: 3, backgroundColor: '#c9553d', borderColor: '#c9553d' }, alphaArea: 0.12 },
-              series: [{ values: data.errorsByDay.map(function(r) { return r.count; }), lineColor: '#c9553d', backgroundColor: '#c9553d' }]
-            },
-            height: 340, width: '100%'
-          });
-        }
-
         // Errors by page — CSS horizontal bars (simple single-series)
         if (data.errorsByPage.length > 0) {
           document.getElementById('errorsByPageChart').innerHTML = cssHBar(
@@ -175,6 +159,24 @@
             '<td class="mono">' + (e.session_id ? e.session_id.substring(0, 10) : '—') + '</td></tr>';
         }).join('');
 
+        // Error trend — ZingChart (complex spline area time-series)
+        if (typeof zingchart !== 'undefined' && data.errorsByDay.length > 0) {
+          try {
+            zingchart.render({
+              id: 'errorsTimeChart',
+              data: {
+                ...ZC.g, type: 'area',
+                scaleX: { ...ZC.sx, labels: data.errorsByDay.map(function(r) { return r.day.substring(5); }) },
+                scaleY: ZC.sy,
+                tooltip: ZC.tt,
+                plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { size: 3, backgroundColor: '#c9553d', borderColor: '#c9553d' }, alphaArea: 0.12 },
+                series: [{ values: data.errorsByDay.map(function(r) { return r.count; }), lineColor: '#c9553d', backgroundColor: '#c9553d' }]
+              },
+              height: 340, width: '100%'
+            });
+          } catch (e) { console.warn('Error trend chart render failed:', e); }
+        }
+
         loadComments();
       } catch (err) { console.error('Error load failed:', err); }
     }
@@ -196,7 +198,7 @@
       loadComments();
     }
 
-    load();
+    document.addEventListener('DOMContentLoaded', load);
   </script>
 </body>
 </html>

@@ -154,44 +154,6 @@
               '<span class="css-vbar-label">' + m.label + '</span></div>';
           }).join('') + '</div>';
 
-        // Volume by hour — ZingChart (complex spline area time-series)
-        if (data.volumeByHour.length > 0) {
-          zingchart.render({
-            id: 'volumeChart',
-            data: {
-              ...ZC.g, type: 'area',
-              scaleX: { ...ZC.sx, labels: data.volumeByHour.map(function(r) { var p = r.hour_bucket.split(' '); return p[1] || r.hour_bucket; }) },
-              scaleY: ZC.sy,
-              tooltip: ZC.tt,
-              plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { visible: false }, alphaArea: 0.15 },
-              series: [{ values: data.volumeByHour.map(function(r) { return r.count; }), lineColor: '#3a8a9e', backgroundColor: '#3a8a9e' }]
-            },
-            height: 340, width: '100%'
-          });
-        }
-
-        // Per-page comparison — ZingChart (multi-series grouped bar)
-        if (data.byPage.length > 0) {
-          var pages = data.byPage.slice(0, 8);
-          var labels = pages.map(function(p) { try { return new URL(p.url).pathname; } catch(e) { return p.url; } });
-          zingchart.render({
-            id: 'pageCompareChart',
-            data: {
-              ...ZC.g, type: 'bar',
-              scaleX: { ...ZC.sx, labels: labels, item: { fontColor: '#4a5568', fontSize: '10px', maxChars: 20 } },
-              scaleY: { ...ZC.sy, label: { text: 'ms', fontColor: '#94a3b8', fontSize: '10px' } },
-              tooltip: { ...ZC.tt, text: '%t: %v ms' },
-              legend: { layout: 'float', backgroundColor: 'transparent', borderWidth: 0, item: { fontColor: '#4a5568', fontSize: '10px' }, marker: { borderRadius: '3px' } },
-              plot: { ...ZC.anim, barWidth: '70%', borderRadius: '3px' },
-              series: [
-                { values: pages.map(function(p) { return p.avg_ttfb || 0; }), text: 'TTFB', backgroundColor: '#2c5f7c' },
-                { values: pages.map(function(p) { return p.avg_lcp || 0; }), text: 'LCP', backgroundColor: '#3a8a9e' }
-              ]
-            },
-            height: 340, width: '100%'
-          });
-        }
-
         // Data table
         document.querySelector('#pageTable tbody').innerHTML = data.byPage.map(function(p) {
           return '<tr><td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + p.url + '</td>' +
@@ -200,6 +162,48 @@
             '<td>' + (p.avg_lcp != null ? p.avg_lcp + ' ms' : '—') + '</td>' +
             '<td>' + (p.avg_cls != null ? p.avg_cls : '—') + '</td></tr>';
         }).join('');
+
+        // Volume by hour — ZingChart (complex spline area time-series)
+        if (typeof zingchart !== 'undefined' && data.volumeByHour.length > 0) {
+          try {
+            zingchart.render({
+              id: 'volumeChart',
+              data: {
+                ...ZC.g, type: 'area',
+                scaleX: { ...ZC.sx, labels: data.volumeByHour.map(function(r) { var p = r.hour_bucket.split(' '); return p[1] || r.hour_bucket; }) },
+                scaleY: ZC.sy,
+                tooltip: ZC.tt,
+                plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { visible: false }, alphaArea: 0.15 },
+                series: [{ values: data.volumeByHour.map(function(r) { return r.count; }), lineColor: '#3a8a9e', backgroundColor: '#3a8a9e' }]
+              },
+              height: 340, width: '100%'
+            });
+          } catch (e) { console.warn('Volume chart render failed:', e); }
+        }
+
+        // Per-page comparison — ZingChart (multi-series grouped bar)
+        if (typeof zingchart !== 'undefined' && data.byPage.length > 0) {
+          try {
+            var pages = data.byPage.slice(0, 8);
+            var labels = pages.map(function(p) { try { return new URL(p.url).pathname; } catch(e) { return p.url; } });
+            zingchart.render({
+              id: 'pageCompareChart',
+              data: {
+                ...ZC.g, type: 'bar',
+                scaleX: { ...ZC.sx, labels: labels, item: { fontColor: '#4a5568', fontSize: '10px', maxChars: 20 } },
+                scaleY: { ...ZC.sy, label: { text: 'ms', fontColor: '#94a3b8', fontSize: '10px' } },
+                tooltip: { ...ZC.tt, text: '%t: %v ms' },
+                legend: { layout: 'float', backgroundColor: 'transparent', borderWidth: 0, item: { fontColor: '#4a5568', fontSize: '10px' }, marker: { borderRadius: '3px' } },
+                plot: { ...ZC.anim, barWidth: '70%', borderRadius: '3px' },
+                series: [
+                  { values: pages.map(function(p) { return p.avg_ttfb || 0; }), text: 'TTFB', backgroundColor: '#2c5f7c' },
+                  { values: pages.map(function(p) { return p.avg_lcp || 0; }), text: 'LCP', backgroundColor: '#3a8a9e' }
+                ]
+              },
+              height: 340, width: '100%'
+            });
+          } catch (e) { console.warn('Page compare chart render failed:', e); }
+        }
 
         loadComments();
       } catch (err) { console.error('Performance load failed:', err); }
@@ -225,7 +229,7 @@
       loadComments();
     }
 
-    load();
+    document.addEventListener('DOMContentLoaded', load);
   </script>
 </body>
 </html>

@@ -164,28 +164,30 @@
         if (hasPerf && summary) {
           var perfData = await (await fetch(API + '/stats/performance')).json();
 
-          // Traffic area chart — ZingChart (complex spline time-series)
-          if (perfData.volumeByHour.length > 0) {
-            zingchart.render({
-              id: 'trafficChart',
-              data: {
-                ...ZC.g, type: 'area',
-                scaleX: { ...ZC.sx, labels: perfData.volumeByHour.map(function(r) { var p = r.hour_bucket.split(' '); return p[1] || r.hour_bucket; }) },
-                scaleY: ZC.sy,
-                tooltip: ZC.tt,
-                plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { visible: false }, alphaArea: 0.15 },
-                series: [{ values: perfData.volumeByHour.map(function(r) { return r.count; }), lineColor: '#2c5f7c', backgroundColor: '#2c5f7c' }]
-              },
-              height: 340, width: '100%'
-            });
-          }
-
           // Event types — CSS horizontal bars (simple single-series)
           var types = (summary.event_types || []).sort(function(a, b) { return b.count - a.count; });
           if (types.length > 0) {
             document.getElementById('eventTypeChart').innerHTML = cssHBar(
               types.map(function(t) { return { label: t.event_type || 'unknown', value: t.count }; })
             );
+          }
+
+          // Traffic area chart — ZingChart (complex spline time-series)
+          if (typeof zingchart !== 'undefined' && perfData.volumeByHour.length > 0) {
+            try {
+              zingchart.render({
+                id: 'trafficChart',
+                data: {
+                  ...ZC.g, type: 'area',
+                  scaleX: { ...ZC.sx, labels: perfData.volumeByHour.map(function(r) { var p = r.hour_bucket.split(' '); return p[1] || r.hour_bucket; }) },
+                  scaleY: ZC.sy,
+                  tooltip: ZC.tt,
+                  plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { visible: false }, alphaArea: 0.15 },
+                  series: [{ values: perfData.volumeByHour.map(function(r) { return r.count; }), lineColor: '#2c5f7c', backgroundColor: '#2c5f7c' }]
+                },
+                height: 340, width: '100%'
+              });
+            } catch (e) { console.warn('Traffic chart render failed:', e); }
           }
         }
 
@@ -225,7 +227,7 @@
       if (r.ok) loadAdminUsers();
     }
 
-    loadDashboard();
+    document.addEventListener('DOMContentLoaded', loadDashboard);
   </script>
 </body>
 </html>
