@@ -132,9 +132,6 @@
     const ua = navigator.userAgent;
     if (/HeadlessChrome|PhantomJS|Lighthouse/i.test(ua)) return true;
 
-    // Chrome UA without window.chrome object
-    if (/Chrome/.test(ua) && !window.chrome) return true;
-
     // Automation framework globals
     if (window._phantom || window.__nightmare || window.callPhantom) return true;
 
