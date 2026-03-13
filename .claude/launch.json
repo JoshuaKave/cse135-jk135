@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "reporting",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["reporting/public_html/nodeapp/reporting_api.js"],
+      "port": 3006
+    }
+  ]
+}

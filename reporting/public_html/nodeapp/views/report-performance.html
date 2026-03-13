@@ -59,7 +59,7 @@
     <article class="card">
       <h3>Performance by Page</h3>
       <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Compare load performance across pages — identify which pages need optimization</p>
-      <div id="pageCompareChart" class="chart-container"></div>
+      <div id="pageCompareChart" style="width:100%;height:360px;overflow:visible;"></div>
     </article>
 
     <!-- Data Table -->
@@ -96,7 +96,7 @@
 
   <script>
     var SLUG = 'performance-snapshot';
-    var ZC = {
+    var CFG = {
       g: { backgroundColor: 'transparent', borderWidth: 0, plotarea: { margin: '40 24 56 56' } },
       tt: { backgroundColor: '#0f2b38', fontColor: '#fff', fontSize: '12px', fontFamily: 'system-ui', borderRadius: '6px', padding: '8px 12px', shadow: false },
       sx: { lineColor: 'rgba(136,183,196,0.3)', tick: { lineColor: 'rgba(136,183,196,0.3)' }, item: { fontColor: '#4a5568', fontSize: '10px' }, guide: { visible: false } },
@@ -162,22 +162,32 @@
         if (typeof zingchart !== 'undefined' && data.byPage.length > 0) {
           try {
             var pages = data.byPage.slice(0, 8);
-            var labels = pages.map(function(p) { try { return new URL(p.url).pathname; } catch(e) { return p.url; } });
+            var labels = pages.map(function(p) {
+              try {
+                var u = new URL(p.url);
+                var parts = u.pathname.split('/').filter(Boolean);
+                var name = parts.length ? parts[parts.length - 1].replace('.html', '') : 'home';
+                var id = u.searchParams ? u.searchParams.get('id') : null;
+                return id ? name + ' #' + id : name;
+              } catch(e) { return p.url; }
+            });
             zingchart.render({
               id: 'pageCompareChart',
               data: {
-                ...ZC.g, type: 'bar',
-                scaleX: { ...ZC.sx, labels: labels, item: { fontColor: '#4a5568', fontSize: '10px', maxChars: 20 } },
-                scaleY: { ...ZC.sy, label: { text: 'ms', fontColor: '#94a3b8', fontSize: '10px' } },
-                tooltip: { ...ZC.tt, text: '%t: %v ms' },
+                backgroundColor: 'transparent', borderWidth: 0,
+                type: 'hbar',
+                plotarea: { margin: '10 60 40 160' },
+                scaleX: { labels: labels, lineColor: 'rgba(136,183,196,0.3)', tick: { lineColor: 'rgba(136,183,196,0.3)' }, item: { fontColor: '#4a5568', fontSize: '11px' }, guide: { visible: false } },
+                scaleY: { lineColor: 'transparent', tick: { visible: false }, item: { fontColor: '#94a3b8', fontSize: '10px' }, guide: { lineColor: 'rgba(136,183,196,0.12)' }, label: { text: 'ms', fontColor: '#94a3b8', fontSize: '10px' } },
+                tooltip: { ...CFG.tt, text: '%t — %k: %v ms' },
                 legend: { layout: 'float', backgroundColor: 'transparent', borderWidth: 0, item: { fontColor: '#4a5568', fontSize: '10px' }, marker: { borderRadius: '3px' } },
-                plot: { ...ZC.anim, barWidth: '70%', borderRadius: '3px' },
+                plot: { ...CFG.anim, barWidth: '60%', borderRadius: '3px' },
                 series: [
                   { values: pages.map(function(p) { return p.avg_ttfb || 0; }), text: 'TTFB', backgroundColor: '#2c5f7c' },
                   { values: pages.map(function(p) { return p.avg_lcp || 0; }), text: 'LCP', backgroundColor: '#3a8a9e' }
                 ]
               },
-              height: 340, width: '100%'
+              height: 360, width: '100%'
             });
           } catch (e) { console.warn('Page compare chart render failed:', e); }
         }

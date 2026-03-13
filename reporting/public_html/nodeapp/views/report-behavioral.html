@@ -130,7 +130,7 @@
   <script>
     var SLUG = 'behavior-performance-overview';
     var COLORS = ['#2c5f7c', '#3a8a9e', '#88b7c4', '#c9553d', '#e8735c', '#b8d8e2', '#0f2b38'];
-    var ZC = {
+    var CFG = {
       g: { backgroundColor: 'transparent', borderWidth: 0, plotarea: { margin: '40 24 56 56' } },
       tt: { backgroundColor: '#0f2b38', fontColor: '#fff', fontSize: '12px', fontFamily: 'system-ui', borderRadius: '6px', padding: '8px 12px', shadow: false },
       sx: { lineColor: 'rgba(136,183,196,0.3)', tick: { lineColor: 'rgba(136,183,196,0.3)' }, item: { fontColor: '#4a5568', fontSize: '10px' }, guide: { visible: false } },
@@ -254,12 +254,12 @@
             zingchart.render({
               id: 'eventTypesChart',
               data: {
-                ...ZC.g, type: 'bar',
-                scaleX: { ...ZC.sx, labels: data.eventTypesBySession.map(function(r) { return r.event_type; }) },
-                scaleY: ZC.sy,
-                tooltip: ZC.tt,
+                ...CFG.g, type: 'bar',
+                scaleX: { ...CFG.sx, labels: data.eventTypesBySession.map(function(r) { return r.event_type; }) },
+                scaleY: CFG.sy,
+                tooltip: CFG.tt,
                 legend: { layout: 'float', backgroundColor: 'transparent', borderWidth: 0, item: { fontColor: '#4a5568', fontSize: '10px' }, marker: { borderRadius: '3px' } },
-                plot: { ...ZC.anim, barWidth: '60%', borderRadius: '3px' },
+                plot: { ...CFG.anim, barWidth: '60%', borderRadius: '3px' },
                 series: [
                   { values: data.eventTypesBySession.map(function(r) { return r.total_count; }), text: 'Total Events', backgroundColor: '#2c5f7c' },
                   { values: data.eventTypesBySession.map(function(r) { return r.session_count; }), text: 'Sessions', backgroundColor: '#88b7c4' }
@@ -285,11 +285,11 @@
               zingchart.render({
                 id: 'sessionsTimeChart',
                 data: {
-                  ...ZC.g, type: 'area',
-                  scaleX: { ...ZC.sx, labels: days.map(function(d) { return d.substring(5); }) },
-                  scaleY: ZC.sy,
-                  tooltip: { ...ZC.tt, text: '%v sessions' },
-                  plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { size: 3, backgroundColor: '#3a8a9e', borderColor: '#3a8a9e' }, alphaArea: 0.15 },
+                  ...CFG.g, type: 'area',
+                  scaleX: { ...CFG.sx, labels: days.map(function(d) { return d.substring(5); }) },
+                  scaleY: CFG.sy,
+                  tooltip: { ...CFG.tt, text: '%v sessions' },
+                  plot: { ...CFG.anim, aspect: 'spline', lineWidth: '2px', marker: { size: 3, backgroundColor: '#3a8a9e', borderColor: '#3a8a9e' }, alphaArea: 0.15 },
                   series: [{ values: days.map(function(d) { return dayMap[d]; }), lineColor: '#3a8a9e', backgroundColor: '#3a8a9e' }]
                 },
                 height: 300, width: '100%'

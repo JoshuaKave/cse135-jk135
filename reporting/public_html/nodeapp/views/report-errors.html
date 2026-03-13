@@ -87,7 +87,7 @@
 
   <script>
     var SLUG = 'error-analysis';
-    var ZC = {
+    var CFG = {
       g: { backgroundColor: 'transparent', borderWidth: 0, plotarea: { margin: '40 24 56 56' } },
       tt: { backgroundColor: '#0f2b38', fontColor: '#fff', fontSize: '12px', fontFamily: 'system-ui', borderRadius: '6px', padding: '8px 12px', shadow: false },
       sx: { lineColor: 'rgba(136,183,196,0.3)', tick: { lineColor: 'rgba(136,183,196,0.3)' }, item: { fontColor: '#4a5568', fontSize: '10px' }, guide: { visible: false } },
@@ -160,11 +160,11 @@
             zingchart.render({
               id: 'errorsTimeChart',
               data: {
-                ...ZC.g, type: 'area',
-                scaleX: { ...ZC.sx, labels: data.errorsByDay.map(function(r) { return r.day.substring(5); }) },
-                scaleY: ZC.sy,
-                tooltip: ZC.tt,
-                plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { size: 3, backgroundColor: '#c9553d', borderColor: '#c9553d' }, alphaArea: 0.12 },
+                ...CFG.g, type: 'area',
+                scaleX: { ...CFG.sx, labels: data.errorsByDay.map(function(r) { return r.day.substring(5); }) },
+                scaleY: CFG.sy,
+                tooltip: CFG.tt,
+                plot: { ...CFG.anim, aspect: 'spline', lineWidth: '2px', marker: { size: 3, backgroundColor: '#c9553d', borderColor: '#c9553d' }, alphaArea: 0.12 },
                 series: [{ values: data.errorsByDay.map(function(r) { return r.count; }), lineColor: '#c9553d', backgroundColor: '#c9553d' }]
               },
               height: 340, width: '100%'
