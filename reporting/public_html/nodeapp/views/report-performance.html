@@ -39,12 +39,19 @@
 
     <!-- KPI Row -->
     <div class="kpi-grid" id="vitalsKPIs" role="region" aria-label="Web Vitals summary">
-      <div class="kpi-card skeleton" style="height:88px;"></div>
-      <div class="kpi-card skeleton" style="height:88px;"></div>
-      <div class="kpi-card skeleton" style="height:88px;"></div>
-      <div class="kpi-card skeleton" style="height:88px;"></div>
-      <div class="kpi-card skeleton" style="height:88px;"></div>
+      <div class="kpi-card skeleton" style="height:96px;"></div>
+      <div class="kpi-card skeleton" style="height:96px;"></div>
+      <div class="kpi-card skeleton" style="height:96px;"></div>
+      <div class="kpi-card skeleton" style="height:96px;"></div>
+      <div class="kpi-card skeleton" style="height:96px;"></div>
     </div>
+
+    <!-- Performance Budget -->
+    <article class="card" id="budgetCard">
+      <h3>Performance Budget</h3>
+      <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">p75 values vs Google Web Vitals thresholds — budgets are hard limits, not aspirational goals. Exceeding one triggers investigation.</p>
+      <div id="budgetSection" style="margin-top:1rem;"></div>
+    </article>
 
     <!-- Charts -->
     <div>
@@ -105,11 +112,49 @@
       anim: { animation: { effect: 'ANIMATION_EXPAND_BOTTOM', method: 'ANIMATION_BACK_EASE_OUT', speed: 500 } }
     };
 
-    function kpi(label, value, unit, variant) {
+    // Budget thresholds from Google Web Vitals "good" tier
+    var BUDGETS = [
+      { key: 'lcp',  label: 'LCP',  budget: 2500, unit: 'ms', desc: 'Largest Contentful Paint' },
+      { key: 'cls',  label: 'CLS',  budget: 0.1,  unit: '',   desc: 'Cumulative Layout Shift' },
+      { key: 'inp',  label: 'INP',  budget: 200,  unit: 'ms', desc: 'Interaction to Next Paint' },
+      { key: 'ttfb', label: 'TTFB', budget: 800,  unit: 'ms', desc: 'Time to First Byte' }
+    ];
+
+    function kpi(label, value, unit, variant, sub) {
       var display = value != null ? value : '—';
       return '<div class="kpi-card' + (variant ? ' kpi-' + variant : '') + '">' +
         '<div class="kpi-label">' + label + '</div>' +
-        '<div class="kpi-value">' + display + '<span class="kpi-unit">' + unit + '</span></div></div>';
+        '<div class="kpi-value">' + display + '<span class="kpi-unit">' + (unit || '') + '</span></div>' +
+        (sub ? '<div class="kpi-sub">' + sub + '</div>' : '') +
+        '</div>';
+    }
+
+    function renderBudget(p75) {
+      var rows = BUDGETS.map(function(b) {
+        var cur = p75[b.key];
+        if (cur == null) return '';
+        var ratio = cur / b.budget;
+        var cls, label, action;
+        if (ratio <= 0.9) {
+          cls = 'budget-ok';   label = '✓ Under budget';
+          action = 'Healthy — continue monitoring weekly';
+        } else if (ratio <= 1.0) {
+          cls = 'budget-warn'; label = '⚠ Close — monitor';
+          action = 'Within limit but approaching threshold — watch next deployment';
+        } else {
+          cls = 'budget-fail'; label = '✗ Over budget';
+          action = 'Exceeds threshold by ' + Math.round((ratio - 1) * 100) + '% — investigate and optimize';
+        }
+        return '<tr>' +
+          '<td><strong>' + b.label + '</strong><br><span class="muted" style="font-size:0.71rem;">' + b.desc + '</span></td>' +
+          '<td class="mono" style="font-size:1rem;">' + cur + (b.unit ? ' ' + b.unit : '') + '</td>' +
+          '<td class="mono" style="color:var(--muted);">' + b.budget + (b.unit ? ' ' + b.unit : '') + '</td>' +
+          '<td><span class="budget-badge ' + cls + '">' + label + '</span></td>' +
+          '<td class="budget-action">' + action + '</td></tr>';
+      }).join('');
+      return '<table class="budget-table" aria-label="Performance budget status">' +
+        '<thead><tr><th>Metric</th><th>Your p75</th><th>Budget</th><th>Status</th><th>Recommended Action</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table>';
     }
 
     async function load() {
@@ -124,14 +169,18 @@
         if (config.user.role === 'viewer') document.getElementById('commentForm').classList.add('hidden');
 
         var v = data.vitals;
+        var p75 = data.p75 || {};
 
+        // KPIs show p75 (the standard for Web Vitals reporting) with avg as context
         document.getElementById('vitalsKPIs').innerHTML = [
-          kpi('TTFB', v.avg_ttfb, 'ms', 'teal'),
-          kpi('LCP', v.avg_lcp, 'ms'),
-          kpi('CLS', v.avg_cls, '', 'coral'),
-          kpi('INP', v.avg_inp, 'ms'),
-          kpi('Samples', v.sample_count, '')
+          kpi('TTFB p75', p75.ttfb, 'ms', p75.ttfb > 800  ? 'coral' : 'teal',  v.avg_ttfb != null ? 'avg ' + v.avg_ttfb + ' ms' : null),
+          kpi('LCP p75',  p75.lcp,  'ms', p75.lcp  > 2500 ? 'coral' : null,    v.avg_lcp  != null ? 'avg ' + v.avg_lcp  + ' ms' : null),
+          kpi('CLS p75',  p75.cls,  '',   p75.cls   > 0.1  ? 'coral' : null,    v.avg_cls  != null ? 'avg ' + v.avg_cls           : null),
+          kpi('INP p75',  p75.inp,  'ms', p75.inp   > 200  ? 'coral' : null,    v.avg_inp  != null ? 'avg ' + v.avg_inp  + ' ms' : null),
+          kpi('Samples',  v.sample_count, '', null, null)
         ].join('');
+
+        document.getElementById('budgetSection').innerHTML = renderBudget(p75);
 
         // Timing metrics — CSS vertical bars (only 3 simple values)
         var metrics = [

@@ -1093,6 +1093,37 @@ a.card-link:hover .report-card {
 
 /* ── Print ────────────────────────────────────────────── */
 
+/* ── Performance Budget Table ─────────────────────────── */
+
+.budget-table { width: 100%; border-collapse: collapse; }
+.budget-table th,
+.budget-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+.budget-table thead th { font-size: 0.71rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+.budget-table tbody tr:last-child td { border-bottom: none; }
+.budget-table tbody tr:hover { background: rgba(58,138,158,0.03); }
+
+.budget-badge { display: inline-block; padding: 0.18rem 0.6rem; border-radius: 99px; font-size: 0.73rem; font-weight: 600; white-space: nowrap; }
+.budget-ok   { background: rgba(52,168,83,0.12);  color: #1a7a34; }
+.budget-warn { background: rgba(251,188,5,0.18);  color: #8a5a00; }
+.budget-fail { background: rgba(201,85,61,0.13);  color: #b52200; }
+
+.budget-action { font-size: 0.78rem; color: var(--muted); }
+
+/* ── Error Triage Table ───────────────────────────────── */
+
+.priority-badge { display: inline-block; padding: 0.18rem 0.55rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+.priority-critical { background: rgba(176,0,0,0.12);   color: #900; }
+.priority-high     { background: rgba(201,85,61,0.13); color: #b03010; }
+.priority-medium   { background: rgba(251,188,5,0.18); color: #8a5a00; }
+.priority-low      { background: rgba(136,183,196,0.18); color: #2c5f7c; }
+.priority-noise    { background: rgba(150,150,150,0.12); color: #666; }
+
+.triage-msg { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; }
+.triage-pages { font-size: 0.76rem; color: var(--muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── KPI sub-label ────────────────────────────────────── */
+.kpi-sub { font-size: 0.71rem; color: var(--muted); margin-top: 0.1rem; }
+
 @media print {
   header.site-header, nav, .export-bar, .comments-section, .noscript-warning { display: none; }
   body { background: white; }

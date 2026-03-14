@@ -1,5 +1,8 @@
 const Database = require('better-sqlite3');
+const bcrypt = require('bcrypt');
 const path = require('path');
+
+const SALT_ROUNDS = 10;
 
 const fs = require('fs');
 
@@ -47,7 +50,7 @@ function seedDefaultUsers(db) {
   const seed = db.transaction(() => {
     const adminInfo = insertUser.run({
       username: 'admin',
-      password: 'password123',
+      password: bcrypt.hashSync('password123', SALT_ROUNDS),
       role: ROLES.SUPER_ADMIN,
       display_name: 'Super Admin'
     });
@@ -56,7 +59,7 @@ function seedDefaultUsers(db) {
 
     const samInfo = insertUser.run({
       username: 'Sam',
-      password: 'password456',
+      password: bcrypt.hashSync('password456', SALT_ROUNDS),
       role: ROLES.ANALYST,
       display_name: 'Sam'
     });
@@ -66,7 +69,7 @@ function seedDefaultUsers(db) {
 
     const sallyInfo = insertUser.run({
       username: 'Sally',
-      password: 'password789',
+      password: bcrypt.hashSync('password789', SALT_ROUNDS),
       role: ROLES.ANALYST,
       display_name: 'Sally'
     });
@@ -76,7 +79,7 @@ function seedDefaultUsers(db) {
 
     const viewerInfo = insertUser.run({
       username: 'viewer',
-      password: 'viewer123',
+      password: bcrypt.hashSync('viewer123', SALT_ROUNDS),
       role: ROLES.VIEWER,
       display_name: 'Read Only Viewer'
     });
@@ -150,6 +153,21 @@ function initializeAuthDb(db) {
   `);
 
   seedDefaultUsers(db);
+
+  // Migrate any pre-existing plain-text passwords to bcrypt hashes
+  const plainTextUsers = db.prepare(
+    "SELECT id, password FROM auth_users WHERE password NOT LIKE '$2b$%' AND password NOT LIKE '$2a$%'"
+  ).all();
+  if (plainTextUsers.length > 0) {
+    const updatePwd = db.prepare('UPDATE auth_users SET password = ? WHERE id = ?');
+    const migratePwds = db.transaction(() => {
+      plainTextUsers.forEach((u) => {
+        updatePwd.run(bcrypt.hashSync(u.password, SALT_ROUNDS), u.id);
+      });
+    });
+    migratePwds();
+    console.log(`Migrated ${plainTextUsers.length} plain-text password(s) to bcrypt hashes.`);
+  }
 }
 
 function normalizePermissionsForRole(role, sections = []) {
@@ -191,8 +209,13 @@ function findUserByCredentials(db, username, password) {
   const row = db.prepare(`
     SELECT id, username, password, role, display_name
     FROM auth_users
-    WHERE username = ? AND password = ?
-  `).get(username, password);
+    WHERE username = ?
+  `).get(username);
+
+  // Same error path for "no such user" and "wrong password" — prevents user enumeration
+  if (!row || !bcrypt.compareSync(password, row.password)) {
+    return null;
+  }
 
   return hydrateUserRecord(db, row);
 }
@@ -228,7 +251,7 @@ function createUser(db, { username, password, role, displayName, sections = [] }
     const info = db.prepare(`
       INSERT INTO auth_users (username, password, role, display_name)
       VALUES (?, ?, ?, ?)
-    `).run(username, password, normalizedRole, displayName || username);
+    `).run(username, bcrypt.hashSync(password, SALT_ROUNDS), normalizedRole, displayName || username);
 
     const insertPermission = db.prepare(`
       INSERT OR IGNORE INTO auth_user_sections (user_id, section_key)

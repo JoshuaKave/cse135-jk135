@@ -18,7 +18,7 @@ initializeAuthDb(db);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(session({
-  secret: 'reporting-simple-secret',
+  secret: process.env.SESSION_SECRET || 'reporting-simple-secret',
   resave: false,
   saveUninitialized: false
 }));
@@ -210,6 +210,17 @@ app.get('/api/stats/performance', requireAuth, requireSection(SECTIONS.PERFORMAN
       WHERE ttfb IS NOT NULL OR lcp IS NOT NULL
     `).get();
 
+    // p75 via sorted-offset approximation (SQLite has no PERCENTILE_CONT)
+    function p75(col) {
+      try {
+        return db.prepare(
+          `SELECT ROUND(${col}, 4) as v FROM events WHERE ${col} IS NOT NULL ORDER BY ${col}
+           LIMIT 1 OFFSET MAX(0, (SELECT CAST(COUNT(*)*3/4 AS INTEGER) FROM events WHERE ${col} IS NOT NULL) - 1)`
+        ).get()?.v ?? null;
+      } catch (e) { return null; }
+    }
+    const p75Vitals = { ttfb: p75('ttfb'), lcp: p75('lcp'), cls: p75('cls'), inp: p75('inp') };
+
     const byPage = db.prepare(`
       SELECT
         url,
@@ -235,7 +246,7 @@ app.get('/api/stats/performance', requireAuth, requireSection(SECTIONS.PERFORMAN
       LIMIT 168
     `).all();
 
-    res.json({ vitals, byPage, volumeByHour });
+    res.json({ vitals, p75: p75Vitals, byPage, volumeByHour });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -330,10 +341,34 @@ app.get('/api/stats/errors', requireAuth, requireSection(SECTIONS.PERFORMANCE, S
       SELECT COUNT(*) as count FROM events
     `).get().count;
 
+    // Group errors by message for triage ranking
+    const errorsByMessage = db.prepare(`
+      SELECT
+        COALESCE(NULLIF(TRIM(title), ''), 'Unknown Error') as message,
+        COUNT(*) as count,
+        COUNT(DISTINCT url) as affected_page_count,
+        GROUP_CONCAT(DISTINCT url) as affected_pages,
+        COUNT(DISTINCT session_id) as session_count,
+        MIN(server_timestamp) as first_seen,
+        MAX(server_timestamp) as last_seen
+      FROM events
+      WHERE event_type = 'error'
+      GROUP BY message
+      ORDER BY count DESC
+      LIMIT 20
+    `).all();
+
+    const daysTracked = db.prepare(`
+      SELECT CAST(MAX(1, julianday(MAX(server_timestamp)) - julianday(MIN(server_timestamp)) + 1) AS INTEGER) as days
+      FROM events WHERE event_type = 'error' AND server_timestamp IS NOT NULL
+    `).get()?.days ?? 1;
+
     res.json({
       errors: errorEvents,
       errorsByPage,
       errorsByDay,
+      errorsByMessage,
+      daysTracked,
       totalErrors,
       totalEvents,
       errorRate: totalEvents > 0 ? (totalErrors / totalEvents * 100).toFixed(2) : 0

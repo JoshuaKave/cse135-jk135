@@ -44,20 +44,36 @@
       <div class="kpi-card skeleton" style="height:88px;"></div>
     </div>
 
+    <!-- Error Triage Table -->
+    <article class="card">
+      <h3>Error Triage</h3>
+      <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">
+        Ranked by impact score (frequency × page criticality × session spread). Critical = fix now. High = current sprint. Medium = backlog. Low / Noise = ignore.
+      </p>
+      <div class="table-wrap" style="margin-top:1rem;">
+        <table id="triageTable" aria-label="Error triage ranking">
+          <thead>
+            <tr>
+              <th scope="col">Priority</th>
+              <th scope="col">Error Message</th>
+              <th scope="col">Count</th>
+              <th scope="col">Per Day</th>
+              <th scope="col">Affected Pages</th>
+              <th scope="col">Sessions</th>
+              <th scope="col">Last Seen</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </article>
+
     <!-- Charts -->
     <div>
       <article class="card">
         <h3>Error Trend Over Time</h3>
         <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Daily error volume — identify when errors spiked and whether they are improving</p>
         <div id="errorsTimeChart" style="width:100%;height:340px;"></div>
-      </article>
-    </div>
-
-    <div>
-      <article class="card">
-        <h3>Errors by Page</h3>
-        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Which pages generate the most errors — prioritize fixes for highest-impact pages</p>
-        <div id="errorsByPageChart"></div>
       </article>
     </div>
 
@@ -108,16 +124,45 @@
       return '<div class="kpi-card' + (variant ? ' kpi-' + variant : '') + '"><div class="kpi-label">' + label + '</div><div class="kpi-value">' + (value != null ? value : '—') + '<span class="kpi-unit">' + (unit || '') + '</span></div></div>';
     }
 
-    function cssHBar(items, color) {
-      var max = Math.max.apply(null, items.map(function(i) { return i.value; }));
-      return '<div class="css-hbar" role="img" aria-label="Horizontal bar chart">' +
-        items.map(function(i) {
-          var pct = max > 0 ? (i.value / max * 100) : 0;
-          return '<div class="css-hbar-row">' +
-            '<span class="css-hbar-label" title="' + i.label + '">' + i.label + '</span>' +
-            '<div class="css-hbar-track"><div class="css-hbar-fill ' + (color || '') + '" style="width:' + pct + '%"></div></div>' +
-            '<span class="css-hbar-val">' + i.value.toLocaleString() + '</span></div>';
-        }).join('') + '</div>';
+    // Known browser noise patterns — not actionable, auto-classified as noise
+    var NOISE_PATTERNS = [
+      /ResizeObserver loop/i,
+      /^Script error\.?$/i,
+      /chrome-extension:/i,
+      /moz-extension:/i,
+      /safari-extension:/i,
+      /NS_ERROR_/i,
+      /Non-Error promise rejection captured with keys: currentTarget/i
+    ];
+
+    // Pages where errors block the user — drive priority up
+    var CRITICAL_PAGES = ['checkout', 'cart', 'payment'];
+    var HIGH_IMPACT_PAGES = ['index', 'home', 'products', '/'];
+
+    function pageScore(affectedPages) {
+      if (!affectedPages) return 1;
+      var pages = affectedPages.toLowerCase();
+      if (CRITICAL_PAGES.some(function(p) { return pages.includes(p); })) return 3;
+      if (HIGH_IMPACT_PAGES.some(function(p) { return pages.includes(p); })) return 2;
+      return 1;
+    }
+
+    function triagePriority(row, daysTracked) {
+      var isNoise = NOISE_PATTERNS.some(function(re) { return re.test(row.message); });
+      if (isNoise) return { label: 'Noise', cls: 'priority-noise' };
+
+      var perDay = row.count / Math.max(daysTracked, 1);
+      var impact = pageScore(row.affected_pages);
+      var score = perDay * impact * Math.max(row.session_count, 1);
+
+      if (impact === 3 && row.count > 3) return { label: 'Critical', cls: 'priority-critical' };
+      if (score >= 20 || (impact >= 2 && row.count > 15)) return { label: 'High', cls: 'priority-high' };
+      if (score >= 5  || row.count > 5)  return { label: 'Medium', cls: 'priority-medium' };
+      return { label: 'Low', cls: 'priority-low' };
+    }
+
+    function shortPath(url) {
+      try { return new URL(url).pathname; } catch(e) { return url.length > 28 ? '\u2026' + url.slice(-27) : url; }
     }
 
     async function load() {
@@ -138,17 +183,33 @@
           kpi('Error Rate', data.errorRate, '%', data.errorRate > 5 ? 'coral' : 'teal')
         ].join('');
 
-        // Errors by page — CSS horizontal bars (simple single-series)
-        if (data.errorsByPage.length > 0) {
-          document.getElementById('errorsByPageChart').innerHTML = cssHBar(
-            data.errorsByPage.slice(0, 8).map(function(p) {
-              var label;
-              try { label = new URL(p.url).pathname; } catch(e) { label = p.url.length > 30 ? '...' + p.url.slice(-27) : p.url; }
-              return { label: label, value: p.error_count };
-            }),
-            'coral'
-          );
-        }
+        // Triage table
+        var daysTracked = data.daysTracked || 1;
+        var msgs = data.errorsByMessage || [];
+        // Sort: noise to bottom, then by impact score descending
+        msgs.sort(function(a, b) {
+          var pa = triagePriority(a, daysTracked), pb = triagePriority(b, daysTracked);
+          var order = { Critical:0, High:1, Medium:2, Low:3, Noise:4 };
+          var oa = order[pa.label] ?? 5, ob = order[pb.label] ?? 5;
+          if (oa !== ob) return oa - ob;
+          return b.count - a.count;
+        });
+        document.querySelector('#triageTable tbody').innerHTML = msgs.length === 0
+          ? '<tr><td colspan="7" class="muted" style="text-align:center;padding:1.5rem;">No errors recorded.</td></tr>'
+          : msgs.map(function(row) {
+            var p = triagePriority(row, daysTracked);
+            var perDay = (row.count / Math.max(daysTracked, 1)).toFixed(1);
+            var pages = (row.affected_pages || '').split(',').map(shortPath).filter(Boolean).join(', ');
+            var lastSeen = row.last_seen ? row.last_seen.substring(0, 16) : '—';
+            return '<tr>' +
+              '<td><span class="priority-badge ' + p.cls + '">' + p.label + '</span></td>' +
+              '<td class="triage-msg" title="' + esc(row.message) + '">' + esc(row.message) + '</td>' +
+              '<td class="mono">' + row.count + '</td>' +
+              '<td class="mono">' + perDay + '/day</td>' +
+              '<td class="triage-pages" title="' + esc(pages) + '">' + esc(pages) + '</td>' +
+              '<td class="mono">' + row.session_count + '</td>' +
+              '<td style="font-size:0.76rem;white-space:nowrap;">' + lastSeen + '</td></tr>';
+          }).join('');
 
         // Error log table
         document.querySelector('#errorsTable tbody').innerHTML = data.errors.slice(0, 40).map(function(e) {
