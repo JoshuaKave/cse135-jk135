@@ -1,5 +1,5 @@
 const Database = require('better-sqlite3');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const path = require('path');
 
 const SALT_ROUNDS = 10;
@@ -170,20 +170,53 @@ function initializeAuthDb(db) {
     console.log(`Migrated ${plainTextUsers.length} plain-text password(s) to bcrypt hashes.`);
   }
 
-  // Migrate error-analysis report sections from legacy ["performance"] to ["errors"]
-  const errorReport = db.prepare(
-    `SELECT id, sections_json FROM auth_saved_reports WHERE slug = 'error-analysis'`
-  ).get();
-  if (errorReport) {
-    try {
-      const currentSections = JSON.parse(errorReport.sections_json);
-      if (!currentSections.includes(SECTIONS.ERRORS)) {
-        db.prepare(`UPDATE auth_saved_reports SET sections_json = ? WHERE slug = 'error-analysis'`)
-          .run(JSON.stringify([SECTIONS.ERRORS]));
-        console.log('Migrated error-analysis report sections to ["errors"].');
-      }
-    } catch (_) {}
-  }
+  // Ensure all three static reports exist with correct sections_json.
+  // This fixes live DBs that were seeded before sections were finalized.
+  const STATIC_REPORTS = [
+    {
+      slug: 'performance-snapshot',
+      name: 'Performance Snapshot',
+      description: 'Static report for performance KPIs and event mix.',
+      sections: [SECTIONS.PERFORMANCE]
+    },
+    {
+      slug: 'behavior-performance-overview',
+      name: 'Behavior + Performance Overview',
+      description: 'Combined view for behavioral and performance analytics.',
+      sections: [SECTIONS.BEHAVIORAL, SECTIONS.PERFORMANCE]
+    },
+    {
+      slug: 'error-analysis',
+      name: 'Error Analysis',
+      description: 'JavaScript errors, promise rejections, and resource failures.',
+      sections: [SECTIONS.ERRORS]
+    }
+  ];
+
+  const upsertReport = db.prepare(`
+    INSERT INTO auth_saved_reports (name, slug, description, sections_json, is_static)
+    VALUES (?, ?, ?, ?, 1)
+    ON CONFLICT(slug) DO UPDATE SET sections_json = excluded.sections_json, name = excluded.name
+  `);
+  STATIC_REPORTS.forEach((r) => {
+    upsertReport.run(r.name, r.slug, r.description, JSON.stringify(r.sections));
+  });
+
+  // Fix Sam's sections: performance only (no errors, no behavioral)
+  // Fix Sally's sections: performance + behavioral only (no errors)
+  const fixSections = db.transaction(() => {
+    ['Sam', 'Sally'].forEach((username) => {
+      const user = db.prepare(`SELECT id, role FROM auth_users WHERE username = ?`).get(username);
+      if (!user || user.role !== ROLES.ANALYST) return;
+      const allowed = username === 'Sam'
+        ? [SECTIONS.PERFORMANCE, SECTIONS.REPORTS]
+        : [SECTIONS.PERFORMANCE, SECTIONS.BEHAVIORAL, SECTIONS.REPORTS];
+      db.prepare(`DELETE FROM auth_user_sections WHERE user_id = ?`).run(user.id);
+      const ins = db.prepare(`INSERT OR IGNORE INTO auth_user_sections (user_id, section_key) VALUES (?, ?)`);
+      allowed.forEach((s) => ins.run(user.id, s));
+    });
+  });
+  fixSections();
 }
 
 function normalizePermissionsForRole(role, sections = []) {

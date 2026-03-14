@@ -93,6 +93,7 @@ function postSignup(req, res) {
     req.session.user = user;
     return res.redirect('/dashboard');
   } catch (error) {
+    console.error('[signup] createUser failed:', error.message);
     if (String(error.message).includes('UNIQUE')) {
       return res.redirect(buildErrorRedirect('That username is already taken.'));
     }
