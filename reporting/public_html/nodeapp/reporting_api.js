@@ -192,7 +192,7 @@ app.get('/api/stats/summary', requireAuth, requireSection(SECTIONS.PERFORMANCE, 
 
 // ── Performance Stats ────────────────────────────────────
 
-app.get('/api/stats/performance', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.REPORTS), (req, res) => {
+app.get('/api/stats/performance', requireAuth, requireSection(SECTIONS.PERFORMANCE), (req, res) => {
   try {
     const vitals = db.prepare(`
       SELECT
@@ -254,7 +254,7 @@ app.get('/api/stats/performance', requireAuth, requireSection(SECTIONS.PERFORMAN
 
 // ── Behavioral Stats ─────────────────────────────────────
 
-app.get('/api/stats/behavioral', requireAuth, requireSection(SECTIONS.BEHAVIORAL, SECTIONS.REPORTS), (req, res) => {
+app.get('/api/stats/behavioral', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const sessions = db.prepare(`
       SELECT
@@ -303,7 +303,7 @@ app.get('/api/stats/behavioral', requireAuth, requireSection(SECTIONS.BEHAVIORAL
 
 // ── Error Stats ──────────────────────────────────────────
 
-app.get('/api/stats/errors', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.REPORTS), (req, res) => {
+app.get('/api/stats/errors', requireAuth, requireSection(SECTIONS.ERRORS), (req, res) => {
   try {
     const errorEvents = db.prepare(`
       SELECT id, url, title, session_id, server_timestamp, raw_payload
@@ -389,7 +389,7 @@ app.get('/api/stats/errors', requireAuth, requireSection(SECTIONS.PERFORMANCE, S
 
 // ── Technographics Stats ─────────────────────────────────
 
-app.get('/api/stats/technographics', requireAuth, requireSection(SECTIONS.BEHAVIORAL, SECTIONS.REPORTS), (req, res) => {
+app.get('/api/stats/technographics', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const viewportBreakdown = db.prepare(`
       SELECT
@@ -446,7 +446,7 @@ app.get('/api/stats/technographics', requireAuth, requireSection(SECTIONS.BEHAVI
 
 // ── Referrer Stats ───────────────────────────────────────
 
-app.get('/api/stats/referrers', requireAuth, requireSection(SECTIONS.BEHAVIORAL, SECTIONS.REPORTS), (req, res) => {
+app.get('/api/stats/referrers', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
   try {
     const referrers = db.prepare(`
       SELECT
@@ -527,10 +527,27 @@ app.delete('/api/auth/users/:id', requireAuth, requireRole('super_admin'), (req,
 
 // ── PDF Export ────────────────────────────────────────────
 
+// Section required per export slug
+const EXPORT_SECTION_MAP = {
+  'performance-snapshot': SECTIONS.PERFORMANCE,
+  'behavior-performance-overview': SECTIONS.BEHAVIORAL,
+  'error-analysis': SECTIONS.ERRORS,
+};
+
 app.get('/api/export/:slug', requireAuth, (req, res) => {
   const PDFDocument = require('pdfkit');
   const slug = req.params.slug;
   const authDb = getDb();
+
+  // Enforce per-report section access
+  const requiredSection = EXPORT_SECTION_MAP[slug];
+  if (requiredSection) {
+    const { hasSectionAccess } = require('./middleware/auth');
+    if (!hasSectionAccess(req.session.user, requiredSection)) {
+      authDb.close();
+      return res.status(403).json({ error: 'Section access denied.' });
+    }
+  }
 
   // Short display name from a full URL
   function pageName(url) {

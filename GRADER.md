@@ -5,8 +5,8 @@
 | Role | Username | Password | What they can see |
 |------|----------|----------|-------------------|
 | Super Admin | `admin` | `password123` | Everything, including user management |
-| Analyst (performance) | `Sam` | `password456` | Performance report and saved reports only |
-| Analyst (performance + behavioral) | `Sally` | `password789` | Performance, behavioral, and saved reports |
+| Analyst (performance) | `Sam` | `password456` | Performance + errors report |
+| Analyst (performance + behavioral) | `Sally` | `password789` | Performance, behavioral reports |
 | Viewer | `viewer` | `viewer123` | Saved reports only (read-only, no commenting) |
 
 ---

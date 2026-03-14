@@ -20,6 +20,7 @@ const ROLES = {
 const SECTIONS = {
   PERFORMANCE: 'performance',
   BEHAVIORAL: 'behavioral',
+  ERRORS: 'errors',
   REPORTS: 'reports',
   ADMIN: 'admin'
 };
@@ -103,7 +104,7 @@ function seedDefaultUsers(db) {
       'Error Analysis',
       'error-analysis',
       'JavaScript errors, promise rejections, and resource failures.',
-      JSON.stringify([SECTIONS.PERFORMANCE]),
+      JSON.stringify([SECTIONS.ERRORS]),
       1
     );
   });
@@ -167,6 +168,21 @@ function initializeAuthDb(db) {
     });
     migratePwds();
     console.log(`Migrated ${plainTextUsers.length} plain-text password(s) to bcrypt hashes.`);
+  }
+
+  // Migrate error-analysis report sections from legacy ["performance"] to ["errors"]
+  const errorReport = db.prepare(
+    `SELECT id, sections_json FROM auth_saved_reports WHERE slug = 'error-analysis'`
+  ).get();
+  if (errorReport) {
+    try {
+      const currentSections = JSON.parse(errorReport.sections_json);
+      if (!currentSections.includes(SECTIONS.ERRORS)) {
+        db.prepare(`UPDATE auth_saved_reports SET sections_json = ? WHERE slug = 'error-analysis'`)
+          .run(JSON.stringify([SECTIONS.ERRORS]));
+        console.log('Migrated error-analysis report sections to ["errors"].');
+      }
+    } catch (_) {}
   }
 }
 

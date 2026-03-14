@@ -32,6 +32,7 @@ function getDashboardConfig(req, res) {
     sections: {
       performance: user.role === 'super_admin' || sections.includes(SECTIONS.PERFORMANCE),
       behavioral: user.role === 'super_admin' || sections.includes(SECTIONS.BEHAVIORAL),
+      errors: user.role === 'super_admin' || sections.includes(SECTIONS.ERRORS),
       reports: user.role === 'super_admin' || sections.includes(SECTIONS.REPORTS),
       admin: user.role === 'super_admin'
     }
