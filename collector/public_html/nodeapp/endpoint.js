@@ -79,12 +79,25 @@ function insertEvent(payload, ip) {
   const vitals = payload.vitals || {};
   const timing = payload.timing || {};
 
+  // For error events, extract a human-readable message into title
+  let eventTitle = payload.title || null;
+  if (!eventTitle && payload.type === 'error' && payload.error) {
+    const e = payload.error;
+    if (e.message) {
+      eventTitle = String(e.message).slice(0, 255);
+    } else if (e.type === 'resource-error') {
+      eventTitle = 'Resource load failed (' + (e.tagName || 'asset') + ')';
+    } else if (e.type) {
+      eventTitle = e.type;
+    }
+  }
+
   const result = insertStmt.run(
     payload.session || null,
     payload.userId || null,
     payload.type || 'unknown',
     payload.url,
-    payload.title || null,
+    eventTitle,
     payload.referrer || null,
     payload.timestamp || null,
     ip || null,

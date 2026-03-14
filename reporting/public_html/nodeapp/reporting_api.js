@@ -341,10 +341,19 @@ app.get('/api/stats/errors', requireAuth, requireSection(SECTIONS.PERFORMANCE, S
       SELECT COUNT(*) as count FROM events
     `).get().count;
 
-    // Group errors by message for triage ranking
+    // Group errors by message for triage ranking.
+    // json_extract fallback handles pre-fix rows where title was not populated.
     const errorsByMessage = db.prepare(`
       SELECT
-        COALESCE(NULLIF(TRIM(title), ''), 'Unknown Error') as message,
+        COALESCE(
+          NULLIF(TRIM(title), ''),
+          json_extract(raw_payload, '$.error.message'),
+          CASE json_extract(raw_payload, '$.error.type')
+            WHEN 'resource-error'
+              THEN 'Resource load failed (' || COALESCE(json_extract(raw_payload, '$.error.tagName'), 'asset') || ')'
+            ELSE 'Unknown Error'
+          END
+        ) as message,
         COUNT(*) as count,
         COUNT(DISTINCT url) as affected_page_count,
         GROUP_CONCAT(DISTINCT url) as affected_pages,
@@ -592,6 +601,52 @@ app.get('/api/export/:slug', requireAuth, (req, res) => {
     doc.y = y + cardH + 14;
   }
 
+  // Draw a simple two-column text table (timestamp | message | url | session)
+  function drawErrorLogTable(doc, errors) {
+    if (!errors || errors.length === 0) return;
+    doc.moveDown(0.5);
+    doc.fontSize(11).fillColor('#1a3a4a').text('Recent Error Log');
+    doc.moveDown(0.3);
+    const ML = doc.page.margins.left;
+    const PW = doc.page.width - ML - doc.page.margins.right;
+    const cols = { ts: 110, msg: PW - 110 - 90, url: 90 };
+    // Header row
+    doc.fontSize(7.5).fillColor('#fff');
+    doc.save().rect(ML, doc.y, PW, 14).fill('#1a3a4a').restore();
+    const hY = doc.y + 3;
+    doc.fillColor('#fff').text('Timestamp', ML + 4, hY, { width: cols.ts, lineBreak: false });
+    doc.text('Message', ML + cols.ts + 4, hY, { width: cols.msg, lineBreak: false });
+    doc.text('Session', ML + cols.ts + cols.msg + 4, hY, { width: cols.url, lineBreak: false });
+    doc.y = hY + 14;
+    errors.forEach(function(e, i) {
+      const rowH = 13;
+      if (i % 2 === 0) {
+        doc.save().rect(ML, doc.y, PW, rowH).fill('#f4f8fb').restore();
+      }
+      const rY = doc.y + 2;
+      let msg = e.title || '';
+      if (!msg && e.raw_payload) {
+        try {
+          const raw = JSON.parse(e.raw_payload);
+          if (raw.error) {
+            if (raw.error.message) msg = raw.error.message;
+            else if (raw.error.type === 'resource-error') msg = 'Resource load failed (' + (raw.error.tagName || 'asset') + ')';
+            else if (raw.error.type) msg = raw.error.type;
+          }
+        } catch (_) {}
+      }
+      if (!msg) msg = 'Unknown Error';
+      const ts = (e.server_timestamp || '').substring(0, 16);
+      const sess = e.session_id ? e.session_id.substring(0, 10) : '—';
+      doc.fontSize(7).fillColor('#333')
+        .text(ts, ML + 4, rY, { width: cols.ts - 4, lineBreak: false })
+        .text(msg, ML + cols.ts + 4, rY, { width: cols.msg - 4, lineBreak: false })
+        .text(sess, ML + cols.ts + cols.msg + 4, rY, { width: cols.url - 4, lineBreak: false });
+      doc.y = rY + rowH - 2;
+    });
+    doc.moveDown(0.5);
+  }
+
   // Draw analyst comments
   function drawComments(doc, comments) {
     if (comments.length === 0) return;
@@ -675,16 +730,34 @@ app.get('/api/export/:slug', requireAuth, (req, res) => {
       title = 'Error Analysis';
       const totalErrors = db.prepare("SELECT COUNT(*) as count FROM events WHERE event_type = 'error'").get().count;
       const totalEvents = db.prepare('SELECT COUNT(*) as count FROM events').get().count;
-      const errorsByPage = db.prepare(`
-        SELECT url, COUNT(*) as error_count FROM events
-        WHERE event_type = 'error' GROUP BY url ORDER BY error_count DESC LIMIT 10
-      `).all();
       const errorsByDay = db.prepare(`
         SELECT strftime('%m-%d', server_timestamp) as day, COUNT(*) as count
         FROM events WHERE event_type = 'error' AND server_timestamp IS NOT NULL
         GROUP BY day ORDER BY day ASC LIMIT 30
       `).all();
       const errorRate = totalEvents > 0 ? (totalErrors / totalEvents * 100).toFixed(2) : 0;
+      const triageErrors = db.prepare(`
+        SELECT
+          COALESCE(
+            NULLIF(TRIM(title), ''),
+            json_extract(raw_payload, '$.error.message'),
+            CASE json_extract(raw_payload, '$.error.type')
+              WHEN 'resource-error'
+                THEN 'Resource load failed (' || COALESCE(json_extract(raw_payload, '$.error.tagName'), 'asset') || ')'
+              ELSE 'Unknown Error'
+            END
+          ) as message,
+          COUNT(*) as count,
+          GROUP_CONCAT(DISTINCT url) as affected_pages,
+          COUNT(DISTINCT session_id) as session_count
+        FROM events WHERE event_type = 'error'
+        GROUP BY message ORDER BY count DESC LIMIT 10
+      `).all();
+      const recentErrorEvents = db.prepare(`
+        SELECT session_id, url, title, raw_payload, server_timestamp
+        FROM events WHERE event_type = 'error'
+        ORDER BY server_timestamp DESC LIMIT 20
+      `).all();
 
       buildPdf = function(doc) {
         drawKPIRow(doc, [
@@ -692,12 +765,17 @@ app.get('/api/export/:slug', requireAuth, (req, res) => {
           { label: 'Total Events', value: totalEvents, unit: '' },
           { label: 'Error Rate',   value: errorRate,   unit: '%' }
         ]);
-        drawHBarChart(doc, 'Errors by Page',
-          errorsByPage.map(function(p) { return { label: pageName(p.url), value: p.error_count }; }),
-          'errors', '#c9553d');
+
+        // Triage table as bar chart (count) with message labels
+        drawHBarChart(doc, 'Error Triage — Count by Message',
+          triageErrors.map(function(e) { return { label: e.message, value: e.count }; }),
+          'occurrences', '#c9553d');
+
         drawHBarChart(doc, 'Daily Error Trend',
           errorsByDay.map(function(d) { return { label: d.day, value: d.count }; }),
           '', '#e8735c');
+
+        drawErrorLogTable(doc, recentErrorEvents);
         drawComments(doc, comments);
       };
 

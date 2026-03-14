@@ -44,21 +44,28 @@ Sign out, then sign in as `Sam` / `password456`. Verify:
 
 **Step 7 — Log out and log in as the viewer**
 Sign in as `viewer` / `viewer123`. Verify:
-- The viewer lands on the reports index and can read the saved reports.
-- The comment form is hidden — viewers cannot post comments.
-- Navigating to `/dashboard` redirects or shows only what the viewer is allowed to see.
-- Attempting `/reports/performance` directly returns 403.
+- The viewer lands on dashboard but with no data visible
+- Navigating to reports shows reports but the viewer cannot comment anything.
 
 **Step 8 — Return as admin and manage users (optional)**
 Sign back in as `admin`. On the dashboard, scroll to the Admin section to see the user list. You can create a new user here and assign them a role and sections.
 
 
 
-## Known Issues and Architectural Concerns
+## Known Issues
 
+### MOST IMPORTANT
+
+**User levels analyst vs. viewer...**
+
+I was unsure of what the difference between the viewer and analyst roles were. The term "saved reports" did not really make sense to me, so I considered these to be the three separate reports categories. This means that the viewer has access to view all of these (but cannot leave analyst comments) and also cannot access the dashboard. Analysts can access specific reports based on their roles (so some can access all three, others can only access errors + performance as an example). I am not sure if this is what was wanted, because it feels weird for a viewer role to have more view access than an analyst, but I was not sure what else to do. Perhaps you wanted me to create a save button that exported the page to another static page to serve as a "snapshot" that the viewers can look at, but I did not have the time to do so.
+
+TLDR: Analysts can leave comments but are able to be restricted from some reports, while viewers can view all reports, but cannot view the dashboard data or leave comments.
+
+### Rest of Issues
 
 **PDF export is download-only (i.e. no email or link)**
-The export generates a PDF server-side with charts, but it downloads immediately rather than saving to a persistent link or sending via email. I was not sure how to set up email so I decided to prioritize getting pdf exporting to at least work.
+The export generates a PDF server-side with charts, but it downloads immediately rather than saving to a persistent link or sending via email. I was not sure how to set up email so I decided to prioritize getting pdf exporting to at least work. Also, the formatting of the actual text (mostly the commenting part) is so so bad, for some reason all the comment text gets shoved to the side vertically and I am not sure why.
 
 **Session secret is not obfuscated**
 The Express session secret falls back to a hardcoded string (`reporting-simple-secret`). I did not have the time to make this obfuscated in an env file (it kept messing up and I gave up).

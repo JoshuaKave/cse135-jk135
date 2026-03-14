@@ -215,8 +215,17 @@
         document.querySelector('#errorsTable tbody').innerHTML = data.errors.slice(0, 40).map(function(e) {
           var message = e.title || '';
           if (e.raw_payload) {
-            try { var raw = JSON.parse(e.raw_payload); if (raw.errorCount) message += ' (' + raw.errorCount + ' errors)'; } catch(x) {}
+            try {
+              var raw = JSON.parse(e.raw_payload);
+              if (!message && raw.error) {
+                if (raw.error.message) message = raw.error.message;
+                else if (raw.error.type === 'resource-error') message = 'Resource load failed (' + (raw.error.tagName || 'asset') + ')';
+                else if (raw.error.type) message = raw.error.type;
+              }
+              if (raw.errorCount) message += ' (' + raw.errorCount + ' errors)';
+            } catch(x) {}
           }
+          if (!message) message = 'Unknown Error';
           return '<tr>' +
             '<td style="white-space:nowrap; font-size:0.78rem;">' + (e.server_timestamp || '') + '</td>' +
             '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (e.url || '') + '</td>' +
