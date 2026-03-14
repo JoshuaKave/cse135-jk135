@@ -45,9 +45,10 @@ function getReportsData(req, res) {
 
   try {
     const reportsData = getSavedReports(db);
-    const visibleReports = req.session.user.role === 'super_admin'
+    const { role, sections } = req.session.user;
+    const visibleReports = (role === 'super_admin' || role === 'viewer')
       ? reportsData
-      : reportsData.filter((report) => report.sections.every((section) => req.session.user.sections.includes(section)));
+      : reportsData.filter((report) => report.sections.every((section) => sections.includes(section)));
 
     return res.json({ reports: visibleReports });
   } finally {

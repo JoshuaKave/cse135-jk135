@@ -47,6 +47,14 @@
     <!-- Charts -->
     <div>
       <article class="card">
+        <h3>Error Trend Over Time</h3>
+        <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Daily error volume — identify when errors spiked and whether they are improving</p>
+        <div id="errorsTimeChart" style="width:100%;height:340px;"></div>
+      </article>
+    </div>
+
+    <div>
+      <article class="card">
         <h3>Errors by Page</h3>
         <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Which pages generate the most errors — prioritize fixes for highest-impact pages</p>
         <div id="errorsByPageChart"></div>
@@ -87,6 +95,7 @@
 
   <script>
     var SLUG = 'error-analysis';
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     var CFG = {
       g: { backgroundColor: 'transparent', borderWidth: 0, plotarea: { margin: '40 24 56 56' } },
       tt: { backgroundColor: '#0f2b38', fontColor: '#fff', fontSize: '12px', fontFamily: 'system-ui', borderRadius: '6px', padding: '8px 12px', shadow: false },
@@ -182,7 +191,7 @@
       var list = document.getElementById('commentsList');
       list.innerHTML = d.comments.length === 0
         ? '<p class="muted" style="font-size:0.85rem;">No analyst comments yet.</p>'
-        : d.comments.map(function(c) { return '<div class="comment"><div class="comment-meta">' + c.username + ' &middot; ' + new Date(c.created_at).toLocaleString() + '</div><div class="comment-text">' + c.comment_text + '</div></div>'; }).join('');
+        : d.comments.map(function(c) { return '<div class="comment"><div class="comment-meta">' + esc(c.username) + ' &middot; ' + new Date(c.created_at).toLocaleString() + '</div><div class="comment-text">' + esc(c.comment_text) + '</div></div>'; }).join('');
     }
 
     async function postComment() {

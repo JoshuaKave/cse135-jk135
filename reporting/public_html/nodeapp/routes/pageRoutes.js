@@ -16,9 +16,9 @@ const router = express.Router();
 router.get('/', (req, res) => res.redirect('/dashboard'));
 router.get('/dashboard', requireAuth, dashboard);
 router.get('/reports', requireAuth, requireSection(SECTIONS.REPORTS), reports);
-router.get('/reports/performance', requireAuth, requireSection(SECTIONS.PERFORMANCE), reportPerformance);
-router.get('/reports/behavioral', requireAuth, requireSection(SECTIONS.BEHAVIORAL), reportBehavioral);
-router.get('/reports/errors', requireAuth, requireSection(SECTIONS.PERFORMANCE), reportErrors);
+router.get('/reports/performance', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.REPORTS), reportPerformance);
+router.get('/reports/behavioral', requireAuth, requireSection(SECTIONS.BEHAVIORAL, SECTIONS.REPORTS), reportBehavioral);
+router.get('/reports/errors', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.REPORTS), reportErrors);
 router.get('/api/dashboard/config', requireAuth, getDashboardConfig);
 router.get('/api/reports', requireAuth, requireSection(SECTIONS.REPORTS), getReportsData);
 

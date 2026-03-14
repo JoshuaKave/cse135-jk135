@@ -168,7 +168,7 @@ app.delete('/api/sessions/:id', requireAuth, requireSection(SECTIONS.BEHAVIORAL)
 
 // ── Stats Summary ────────────────────────────────────────
 
-app.get('/api/stats/summary', requireAuth, requireSection(SECTIONS.PERFORMANCE), (req, res) => {
+app.get('/api/stats/summary', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.REPORTS), (req, res) => {
   try {
     const stats = {
       total_events: db.prepare('SELECT COUNT(*) as count FROM events').get().count,
@@ -192,7 +192,7 @@ app.get('/api/stats/summary', requireAuth, requireSection(SECTIONS.PERFORMANCE),
 
 // ── Performance Stats ────────────────────────────────────
 
-app.get('/api/stats/performance', requireAuth, requireSection(SECTIONS.PERFORMANCE), (req, res) => {
+app.get('/api/stats/performance', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.REPORTS), (req, res) => {
   try {
     const vitals = db.prepare(`
       SELECT
@@ -243,7 +243,7 @@ app.get('/api/stats/performance', requireAuth, requireSection(SECTIONS.PERFORMAN
 
 // ── Behavioral Stats ─────────────────────────────────────
 
-app.get('/api/stats/behavioral', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
+app.get('/api/stats/behavioral', requireAuth, requireSection(SECTIONS.BEHAVIORAL, SECTIONS.REPORTS), (req, res) => {
   try {
     const sessions = db.prepare(`
       SELECT
@@ -292,7 +292,7 @@ app.get('/api/stats/behavioral', requireAuth, requireSection(SECTIONS.BEHAVIORAL
 
 // ── Error Stats ──────────────────────────────────────────
 
-app.get('/api/stats/errors', requireAuth, requireSection(SECTIONS.PERFORMANCE), (req, res) => {
+app.get('/api/stats/errors', requireAuth, requireSection(SECTIONS.PERFORMANCE, SECTIONS.REPORTS), (req, res) => {
   try {
     const errorEvents = db.prepare(`
       SELECT id, url, title, session_id, server_timestamp, raw_payload
@@ -345,7 +345,7 @@ app.get('/api/stats/errors', requireAuth, requireSection(SECTIONS.PERFORMANCE), 
 
 // ── Technographics Stats ─────────────────────────────────
 
-app.get('/api/stats/technographics', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
+app.get('/api/stats/technographics', requireAuth, requireSection(SECTIONS.BEHAVIORAL, SECTIONS.REPORTS), (req, res) => {
   try {
     const viewportBreakdown = db.prepare(`
       SELECT
@@ -402,7 +402,7 @@ app.get('/api/stats/technographics', requireAuth, requireSection(SECTIONS.BEHAVI
 
 // ── Referrer Stats ───────────────────────────────────────
 
-app.get('/api/stats/referrers', requireAuth, requireSection(SECTIONS.BEHAVIORAL), (req, res) => {
+app.get('/api/stats/referrers', requireAuth, requireSection(SECTIONS.BEHAVIORAL, SECTIONS.REPORTS), (req, res) => {
   try {
     const referrers = db.prepare(`
       SELECT
@@ -488,27 +488,122 @@ app.get('/api/export/:slug', requireAuth, (req, res) => {
   const slug = req.params.slug;
   const authDb = getDb();
 
+  // Short display name from a full URL
+  function pageName(url) {
+    try {
+      const u = new URL(url);
+      const parts = u.pathname.split('/').filter(Boolean);
+      const name = parts.length ? parts[parts.length - 1].replace('.html', '') : 'home';
+      const id = u.searchParams.get('id');
+      return id ? name + ' #' + id : (name || 'home');
+    } catch (e) {
+      return url.length > 28 ? '\u2026' + url.slice(-27) : url;
+    }
+  }
+
+  // Draw a horizontal bar chart with title
+  function drawHBarChart(doc, title, items, valueLabel, color) {
+    if (!items || items.length === 0) return;
+    const ML = doc.page.margins.left;
+    const MR = doc.page.margins.right;
+    const PW = doc.page.width - ML - MR;
+    const LW = 155;
+    const TW = PW - LW - 52;
+    const maxVal = Math.max.apply(null, items.map(function(i) { return i.value || 0; }));
+    const ROW_H = 18;
+    const BAR_H = 10;
+
+    doc.fontSize(11).fillColor('#1a3a4a').text(title);
+    doc.moveDown(0.2);
+
+    items.forEach(function(item) {
+      const y = doc.y;
+      const bw = (maxVal > 0 && item.value > 0) ? Math.max((item.value / maxVal) * TW, 2) : 2;
+      const bx = ML + LW;
+      const by = y + Math.round((ROW_H - BAR_H) / 2);
+
+      doc.fontSize(7.5).fillColor('#4a5568')
+        .text(String(item.label), ML, y + 2, { width: LW - 6, lineBreak: false });
+
+      doc.save().rect(bx, by, bw, BAR_H).fill(color || '#2c5f7c').restore();
+
+      doc.fontSize(7.5).fillColor('#333')
+        .text((item.value != null ? item.value : '\u2014') + (valueLabel ? ' ' + valueLabel : ''), bx + TW + 4, y + 2, { lineBreak: false });
+
+      doc.y = y + ROW_H;
+    });
+
+    doc.moveDown(0.75);
+  }
+
+  // Draw a row of KPI metric cards
+  function drawKPIRow(doc, kpis) {
+    const ML = doc.page.margins.left;
+    const PW = doc.page.width - ML - doc.page.margins.right;
+    const gap = 10;
+    const cardW = Math.floor((PW - gap * (kpis.length - 1)) / kpis.length);
+    const cardH = 54;
+    const y = doc.y;
+
+    kpis.forEach(function(kpi, i) {
+      const x = ML + i * (cardW + gap);
+      doc.save().roundedRect(x, y, cardW, cardH, 4).fill('#eef5f8').restore();
+      doc.fontSize(6.5).fillColor('#888')
+        .text(String(kpi.label).toUpperCase(), x + 8, y + 9, { width: cardW - 16, lineBreak: false });
+      doc.fontSize(17).fillColor('#1a3a4a')
+        .text(String(kpi.value) + (kpi.unit || ''), x + 8, y + 22, { width: cardW - 16, lineBreak: false });
+    });
+
+    doc.y = y + cardH + 14;
+  }
+
+  // Draw analyst comments
+  function drawComments(doc, comments) {
+    if (comments.length === 0) return;
+    doc.moveDown(0.5);
+    doc.fontSize(11).fillColor('#1a3a4a').text('Analyst Comments');
+    doc.moveDown(0.3);
+    comments.forEach(function(c) {
+      doc.fontSize(8).fillColor('#888').text(String(c.username) + '  \u00b7  ' + c.created_at);
+      doc.fontSize(9.5).fillColor('#333').text(String(c.comment_text));
+      doc.moveDown(0.4);
+    });
+  }
+
   try {
     const comments = getReportComments(authDb, slug);
+    let title, buildPdf;
 
-    let title, statsData;
     if (slug === 'performance-snapshot') {
       title = 'Performance Snapshot';
       const vitals = db.prepare(`
-        SELECT
-          COUNT(*) as sample_count,
-          ROUND(AVG(ttfb), 2) as avg_ttfb,
-          ROUND(AVG(lcp), 2) as avg_lcp,
-          ROUND(AVG(cls), 4) as avg_cls,
-          ROUND(AVG(inp), 2) as avg_inp
+        SELECT COUNT(*) as sample_count,
+          ROUND(AVG(ttfb), 1) as avg_ttfb, ROUND(AVG(lcp), 1) as avg_lcp,
+          ROUND(AVG(cls), 4) as avg_cls, ROUND(AVG(inp), 1) as avg_inp
         FROM events WHERE ttfb IS NOT NULL OR lcp IS NOT NULL
       `).get();
       const byPage = db.prepare(`
-        SELECT url, COUNT(*) as hits, ROUND(AVG(ttfb), 2) as avg_ttfb, ROUND(AVG(lcp), 2) as avg_lcp
+        SELECT url, COUNT(*) as hits, ROUND(AVG(ttfb), 1) as avg_ttfb, ROUND(AVG(lcp), 1) as avg_lcp
         FROM events WHERE event_type IN ('pageview', 'page_exit')
         GROUP BY url ORDER BY hits DESC LIMIT 10
       `).all();
-      statsData = { vitals, byPage };
+
+      buildPdf = function(doc) {
+        drawKPIRow(doc, [
+          { label: 'Avg TTFB', value: vitals.avg_ttfb != null ? vitals.avg_ttfb : '\u2014', unit: ' ms' },
+          { label: 'Avg LCP',  value: vitals.avg_lcp  != null ? vitals.avg_lcp  : '\u2014', unit: ' ms' },
+          { label: 'Avg CLS',  value: vitals.avg_cls  != null ? vitals.avg_cls  : '\u2014', unit: '' },
+          { label: 'Avg INP',  value: vitals.avg_inp  != null ? vitals.avg_inp  : '\u2014', unit: ' ms' },
+          { label: 'Samples',  value: vitals.sample_count || 0, unit: '' }
+        ]);
+        drawHBarChart(doc, 'Avg TTFB by Page',
+          byPage.map(function(p) { return { label: pageName(p.url), value: p.avg_ttfb || 0 }; }),
+          'ms', '#2c5f7c');
+        drawHBarChart(doc, 'Avg LCP by Page',
+          byPage.map(function(p) { return { label: pageName(p.url), value: p.avg_lcp || 0 }; }),
+          'ms', '#3a8a9e');
+        drawComments(doc, comments);
+      };
 
     } else if (slug === 'behavior-performance-overview') {
       title = 'Behavior + Performance Overview';
@@ -518,7 +613,28 @@ app.get('/api/export/:slug', requireAuth, (req, res) => {
         GROUP BY url ORDER BY pageviews DESC LIMIT 10
       `).all();
       const sessionCount = db.prepare('SELECT COUNT(DISTINCT session_id) as count FROM events').get().count;
-      statsData = { sessionCount, topPages };
+      const eventTypes = db.prepare(`
+        SELECT event_type, COUNT(*) as total_count
+        FROM events GROUP BY event_type ORDER BY total_count DESC
+      `).all();
+
+      buildPdf = function(doc) {
+        drawKPIRow(doc, [
+          { label: 'Total Sessions', value: sessionCount, unit: '' },
+          { label: 'Pages Tracked',  value: topPages.length, unit: '' },
+          { label: 'Event Types',    value: eventTypes.length, unit: '' }
+        ]);
+        drawHBarChart(doc, 'Pageviews by Page',
+          topPages.map(function(p) { return { label: pageName(p.url), value: p.pageviews }; }),
+          '', '#2c5f7c');
+        drawHBarChart(doc, 'Unique Sessions by Page',
+          topPages.map(function(p) { return { label: pageName(p.url), value: p.unique_sessions }; }),
+          '', '#3a8a9e');
+        drawHBarChart(doc, 'Event Type Distribution',
+          eventTypes.map(function(e) { return { label: e.event_type, value: e.total_count }; }),
+          'events', '#88b7c4');
+        drawComments(doc, comments);
+      };
 
     } else if (slug === 'error-analysis') {
       title = 'Error Analysis';
@@ -528,62 +644,50 @@ app.get('/api/export/:slug', requireAuth, (req, res) => {
         SELECT url, COUNT(*) as error_count FROM events
         WHERE event_type = 'error' GROUP BY url ORDER BY error_count DESC LIMIT 10
       `).all();
-      statsData = { totalErrors, totalEvents, errorRate: totalEvents > 0 ? (totalErrors / totalEvents * 100).toFixed(2) + '%' : '0%', errorsByPage };
+      const errorsByDay = db.prepare(`
+        SELECT strftime('%m-%d', server_timestamp) as day, COUNT(*) as count
+        FROM events WHERE event_type = 'error' AND server_timestamp IS NOT NULL
+        GROUP BY day ORDER BY day ASC LIMIT 30
+      `).all();
+      const errorRate = totalEvents > 0 ? (totalErrors / totalEvents * 100).toFixed(2) : 0;
+
+      buildPdf = function(doc) {
+        drawKPIRow(doc, [
+          { label: 'Total Errors', value: totalErrors, unit: '' },
+          { label: 'Total Events', value: totalEvents, unit: '' },
+          { label: 'Error Rate',   value: errorRate,   unit: '%' }
+        ]);
+        drawHBarChart(doc, 'Errors by Page',
+          errorsByPage.map(function(p) { return { label: pageName(p.url), value: p.error_count }; }),
+          'errors', '#c9553d');
+        drawHBarChart(doc, 'Daily Error Trend',
+          errorsByDay.map(function(d) { return { label: d.day, value: d.count }; }),
+          '', '#e8735c');
+        drawComments(doc, comments);
+      };
 
     } else {
       return res.status(404).json({ error: 'Report not found.' });
     }
 
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: 50, size: 'letter' });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${slug}.pdf"`);
     doc.pipe(res);
 
-    // Title
-    doc.fontSize(20).text(title, { align: 'center' });
-    doc.moveDown(0.5);
-    doc.fontSize(10).fillColor('#667085').text(`Generated: ${new Date().toISOString()}`, { align: 'center' });
-    doc.moveDown(1);
+    // Dark header banner
+    const HH = 72;
+    doc.save().rect(0, 0, doc.page.width, HH).fill('#0f2b38').restore();
+    const contentW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    doc.fontSize(20).fillColor('#ffffff')
+      .text(title, doc.page.margins.left, 20, { align: 'center', width: contentW });
+    doc.fontSize(8).fillColor('rgba(255,255,255,0.55)')
+      .text('Generated: ' + new Date().toLocaleString(), doc.page.margins.left, 46, { align: 'center', width: contentW });
+    doc.y = HH + 18;
 
-    // Stats
-    doc.fontSize(14).fillColor('#1a3a4a').text('Summary Statistics');
-    doc.moveDown(0.5);
-    doc.fontSize(10).fillColor('#333');
-
-    for (const [key, value] of Object.entries(statsData)) {
-      if (Array.isArray(value)) {
-        doc.moveDown(0.5);
-        doc.fontSize(12).fillColor('#2c5f7c').text(key);
-        doc.fontSize(9).fillColor('#333');
-        value.forEach((row) => {
-          const parts = Object.entries(row).map(([k, v]) => `${k}: ${v}`).join('  |  ');
-          doc.text(parts);
-        });
-      } else if (typeof value === 'object' && value !== null) {
-        doc.moveDown(0.5);
-        doc.fontSize(12).fillColor('#2c5f7c').text(key);
-        doc.fontSize(10).fillColor('#333');
-        for (const [k, v] of Object.entries(value)) {
-          doc.text(`${k}: ${v ?? 'N/A'}`);
-        }
-      } else {
-        doc.text(`${key}: ${value}`);
-      }
-    }
-
-    // Comments
-    if (comments.length > 0) {
-      doc.moveDown(1);
-      doc.fontSize(14).fillColor('#1a3a4a').text('Analyst Comments');
-      doc.moveDown(0.5);
-      comments.forEach((c) => {
-        doc.fontSize(9).fillColor('#667085').text(`${c.username} — ${c.created_at}`);
-        doc.fontSize(10).fillColor('#333').text(c.comment_text);
-        doc.moveDown(0.5);
-      });
-    }
-
+    buildPdf(doc);
     doc.end();
+
   } catch (err) {
     authDb.close();
     res.status(500).json({ error: err.message });
@@ -608,6 +712,17 @@ app.use((req, res) => {
     return res.status(404).json({ error: 'Not found' });
   }
   res.status(404).sendFile(path.join(__dirname, 'views', '404.html'));
+});
+
+// ── 500 Error Handler ─────────────────────────────────────
+
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  if (req.path.startsWith('/api/')) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+  res.status(500).sendFile(path.join(__dirname, 'views', '500.html'));
 });
 
 // ── Graceful Shutdown ────────────────────────────────────

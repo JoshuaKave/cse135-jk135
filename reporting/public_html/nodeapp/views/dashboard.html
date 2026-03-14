@@ -46,6 +46,13 @@
     <section id="chartsWrap" class="hidden" aria-label="Data visualizations">
       <div>
         <article class="card">
+          <h3>Traffic Over Time</h3>
+          <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Hourly event volume — spot traffic spikes and quiet periods</p>
+          <div id="trafficChart"></div>
+        </article>
+      </div>
+      <div>
+        <article class="card">
           <h3>Event Composition</h3>
           <p class="muted" style="font-size:0.78rem; margin-top:-0.5rem;">Distribution of event types across all collected data</p>
           <div id="eventTypeChart"></div>
@@ -88,7 +95,8 @@
 
   <script>
     var API = '/api';
-    var ZC = {
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    var DCFG = {
       g: { backgroundColor: 'transparent', borderWidth: 0, plotarea: { margin: '48 24 56 56' } },
       tt: { backgroundColor: '#0f2b38', fontColor: '#fff', fontSize: '12px', fontFamily: 'system-ui', borderRadius: '6px', padding: '8px 12px', shadow: false },
       sx: { lineColor: 'rgba(136,183,196,0.3)', tick: { lineColor: 'rgba(136,183,196,0.3)' }, item: { fontColor: '#4a5568', fontSize: '10px' }, guide: { visible: false } },
@@ -173,11 +181,11 @@
               zingchart.render({
                 id: 'trafficChart',
                 data: {
-                  ...ZC.g, type: 'area',
-                  scaleX: { ...ZC.sx, labels: perfData.volumeByHour.map(function(r) { var p = r.hour_bucket.split(' '); return p[1] || r.hour_bucket; }) },
-                  scaleY: ZC.sy,
-                  tooltip: ZC.tt,
-                  plot: { ...ZC.anim, aspect: 'spline', lineWidth: '2px', marker: { visible: false }, alphaArea: 0.15 },
+                  ...DCFG.g, type: 'area',
+                  scaleX: { ...DCFG.sx, labels: perfData.volumeByHour.map(function(r) { var p = r.hour_bucket.split(' '); return p[1] || r.hour_bucket; }) },
+                  scaleY: DCFG.sy,
+                  tooltip: DCFG.tt,
+                  plot: { ...DCFG.anim, aspect: 'spline', lineWidth: '2px', marker: { visible: false }, alphaArea: 0.15 },
                   series: [{ values: perfData.volumeByHour.map(function(r) { return r.count; }), lineColor: '#2c5f7c', backgroundColor: '#2c5f7c' }]
                 },
                 height: 340, width: '100%'
@@ -209,9 +217,9 @@
       var users = (await res.json()).users;
       document.getElementById('adminUsers').innerHTML = users.map(function(u) {
         return '<li class="user-item"><div class="user-info">' +
-          '<span class="user-name">' + u.displayName + ' <span class="muted" style="font-weight:400;">@' + u.username + '</span></span>' +
-          '<span class="user-meta">' + u.role.replace('_', ' ') + ' · ' + (u.sections || []).join(', ') + '</span></div>' +
-          (u.role !== 'super_admin' ? '<button class="btn-sm btn-danger" onclick="deleteUser(' + u.id + ',\'' + u.username + '\')">Remove</button>' : '') +
+          '<span class="user-name">' + esc(u.displayName) + ' <span class="muted" style="font-weight:400;">@' + esc(u.username) + '</span></span>' +
+          '<span class="user-meta">' + esc(u.role.replace('_', ' ')) + ' · ' + (u.sections || []).map(esc).join(', ') + '</span></div>' +
+          (u.role !== 'super_admin' ? '<button class="btn-sm btn-danger" onclick="deleteUser(' + u.id + ',\'' + esc(u.username) + '\')">Remove</button>' : '') +
           '</li>';
       }).join('');
     }
